@@ -11,8 +11,12 @@ export interface SerializedFill {
 
 export interface SerializedStroke {
   color: string | null;
-  width: number | null;
+  lineCap: CanvasLineCap | null;
+  lineJoin: CanvasLineJoin | null;
   lineDash: number[] | null;
+  lineDashOffset: number | null;
+  miterLimit: number | null;
+  width: number | null;
 }
 
 export interface SerializedCircle {
@@ -23,24 +27,24 @@ export interface SerializedCircle {
 
 export interface SerializedIcon {
   src: string | null;
-  scale: number|[number,number] | null;
+  scale: number | [number, number] | null;
   rotation: number | null;
   opacity: number | null;
   anchor: number[] | null;
   //这两个参数暂时没有get函数
-//   anchorXUnits: string | null;
-//   anchorYUnits: string | null;
+  //   anchorXUnits: string | null;
+  //   anchorYUnits: string | null;
   // 更多 Icon 相关参数可按需添加
 }
 
 export interface SerializedText {
   font: string | null;
-  text: string | null;
+  text: string | string[] | null;
   offsetX: number | null;
   offsetY: number | null;
   fill: SerializedFill | null;
   stroke: SerializedStroke | null;
-  scale: number | null;
+  scale: number | [number, number] | null;
   rotation: number | null;
   // 更多 Text 相关参数也可继续拓展
 }
@@ -59,10 +63,10 @@ function isValid<T>(value: T | null | undefined): value is T {
 
 // 序列化
 export function serializeStyle(style: Style): SerializedStyle {
-  const fill = style.getFill();
-  const stroke = style.getStroke();
+  const fill: Fill | null = style.getFill();
+  const stroke: Stroke | null = style.getStroke();
   const image = style.getImage();
-  const text = style.getText();
+  const text: Text | null = style.getText();
 
   let imageCircle: SerializedCircle | null = null;
   let imageIcon: SerializedIcon | null = null;
@@ -72,53 +76,30 @@ export function serializeStyle(style: Style): SerializedStyle {
       radius: image.getRadius(),
       fill: image.getFill() ? { color: image.getFill()?.getColor() as string ?? null } : null,
       stroke: image.getStroke()
-        ? {
-            color: image.getStroke()?.getColor() as string ?? null,
-            width: image.getStroke()?.getWidth() ?? null,
-            lineDash: image.getStroke()?.getLineDash?.() ?? null,
-          }
+        ? serializeStroke(image.getStroke())
         : null,
     };
   } else if (image instanceof Icon) {
     imageIcon = {
       src: image.getSrc() ?? null,
-      scale: ((image.getScale() ?? null ) as any),
+      scale: ((image.getScale() ?? null) as any),
       rotation: image.getRotation() ?? null,
       opacity: image.getOpacity() ?? null,
       anchor: image.getAnchor() ?? null,
-    //   anchorXUnits: image.getAnchorXUnits() ?? null,
-    //   anchorYUnits: image.getAnchorYUnits() ?? null,
+      //   anchorXUnits: image.getAnchorXUnits() ?? null,
+      //   anchorYUnits: image.getAnchorYUnits() ?? null,
     };
   }
 
   return {
     fill: fill ? { color: fill.getColor() as string ?? null } : null,
     stroke: stroke
-      ? {
-          color: stroke.getColor() as string ?? null,
-          width: stroke.getWidth() ?? null,
-          lineDash: stroke.getLineDash?.() ?? null,
-        }
+      ? serializeStroke(stroke)
       : null,
     imageCircle,
     imageIcon,
     text: text
-      ? {
-          font: text.getFont() ?? null,
-          text: text.getText() ?? null,
-          offsetX: text.getOffsetX() ?? null,
-          offsetY: text.getOffsetY() ?? null,
-          fill: text.getFill() ? { color: text.getFill()?.getColor() as string ?? null } : null,
-          stroke: text.getStroke()
-            ? {
-                color: text.getStroke()?.getColor() as string ?? null,
-                width: text.getStroke()?.getWidth() ?? null,
-                lineDash: text.getStroke()?.getLineDash?.() ?? null,
-              }
-            : null,
-          scale: text.getScale() ?? null,
-          rotation: text.getRotation() ?? null,
-        }
+      ? serializeText(text)
       : null,
   };
 }
@@ -129,10 +110,10 @@ export function deserializeStyle(data: SerializedStyle): Style {
 
   const stroke = isValid(data.stroke?.color)
     ? new Stroke({
-        color: data.stroke.color!,
-        width: data.stroke.width ?? undefined,
-        lineDash: data.stroke.lineDash ?? undefined,
-      })
+      color: data.stroke.color!,
+      width: data.stroke.width ?? undefined,
+      lineDash: data.stroke.lineDash ?? undefined,
+    })
     : undefined;
 
   let image = undefined;
@@ -142,10 +123,10 @@ export function deserializeStyle(data: SerializedStyle): Style {
       fill: isValid(data.imageCircle.fill?.color) ? new Fill({ color: data.imageCircle.fill.color! }) : undefined,
       stroke: isValid(data.imageCircle.stroke?.color)
         ? new Stroke({
-            color: data.imageCircle.stroke.color!,
-            width: data.imageCircle.stroke.width ?? undefined,
-            lineDash: data.imageCircle.stroke.lineDash ?? undefined,
-          })
+          color: data.imageCircle.stroke.color!,
+          width: data.imageCircle.stroke.width ?? undefined,
+          lineDash: data.imageCircle.stroke.lineDash ?? undefined,
+        })
         : undefined,
     });
   } else if (data.imageIcon) {
@@ -162,22 +143,81 @@ export function deserializeStyle(data: SerializedStyle): Style {
 
   const text = data.text
     ? new Text({
-        font: data.text.font ?? undefined,
-        text: data.text.text ?? undefined,
-        offsetX: data.text.offsetX ?? undefined,
-        offsetY: data.text.offsetY ?? undefined,
-        fill: isValid(data.text.fill?.color) ? new Fill({ color: data.text.fill.color! }) : undefined,
-        stroke: isValid(data.text.stroke?.color)
-          ? new Stroke({
-              color: data.text.stroke.color!,
-              width: data.text.stroke.width ?? undefined,
-              lineDash: data.text.stroke.lineDash ?? undefined,
-            })
-          : undefined,
-        scale: data.text.scale ?? undefined,
-        rotation: data.text.rotation ?? undefined,
-      })
+      font: data.text.font ?? undefined,
+      text: data.text.text ?? undefined,
+      offsetX: data.text.offsetX ?? undefined,
+      offsetY: data.text.offsetY ?? undefined,
+      fill: isValid(data.text.fill?.color) ? new Fill({ color: data.text.fill.color! }) : undefined,
+      stroke: isValid(data.text.stroke?.color)
+        ? new Stroke({
+          color: data.text.stroke.color!,
+          width: data.text.stroke.width ?? undefined,
+          lineDash: data.text.stroke.lineDash ?? undefined,
+        })
+        : undefined,
+      scale: data.text.scale ?? undefined,
+      rotation: data.text.rotation ?? undefined,
+    })
     : undefined;
 
   return new Style({ fill, stroke, image, text });
+}
+
+
+function serializeStroke(stroke: Stroke | null): SerializedStroke | null {
+  if (!stroke) return null;
+
+  return {
+    color: stroke.getColor() as string ?? null,
+    lineCap: stroke.getLineCap() ?? null,
+    lineJoin: stroke.getLineJoin() ?? null,
+    lineDash: stroke.getLineDash?.() ?? null,
+    lineDashOffset: stroke.getLineDashOffset() ?? null,
+    miterLimit: stroke.getMiterLimit() ?? null,
+    width: stroke.getWidth() ?? null,
+  };
+}
+
+function deserializeStroke(data: SerializedStroke | null): Stroke | undefined {
+  if (!data || !isValid(data.color)) return undefined;
+
+  return new Stroke({
+    color: data.color!,
+    width: data.width ?? undefined,
+    lineCap: data.lineCap ?? undefined,
+    lineJoin: data.lineJoin ?? undefined,
+    lineDash: data.lineDash ?? undefined,
+    lineDashOffset: data.lineDashOffset ?? undefined,
+    miterLimit: data.miterLimit ?? undefined,
+  });
+}
+
+function serializeText(text: Text | null): SerializedText | null {
+  if (!text) return null;
+
+  return {
+    font: text.getFont() ?? null,
+    text: text.getText() ?? null,
+    offsetX: text.getOffsetX() ?? null,
+    offsetY: text.getOffsetY() ?? null,
+    fill: text.getFill() ? { color: text.getFill()?.getColor() as string ?? null } : null,
+    stroke: serializeStroke(text.getStroke()),
+    scale: (text.getScale() ?? null) as any,
+    rotation: text.getRotation() ?? null,
+  };
+}
+
+function deserializeText(data: SerializedText | null): Text | undefined {
+  if (!data) return undefined;
+
+  return new Text({
+    font: data.font ?? undefined,
+    text: data.text ?? undefined,
+    offsetX: data.offsetX ?? undefined,
+    offsetY: data.offsetY ?? undefined,
+    fill: isValid(data.fill?.color) ? new Fill({ color: data.fill.color! }) : undefined,
+    stroke: deserializeStroke(data.stroke),
+    scale: data.scale ?? undefined,
+    rotation: data.rotation ?? undefined,
+  });
 }

@@ -17,8 +17,19 @@ export function cleanUndefined(obj: any): any {
 /**
  * 移除所有值为 null 的字段，防止传入构造函数时报错。
  */
-function cleanNull<T extends Record<string, any>>(obj: T): Partial<T> {
+export function cleanNull<T extends Record<string, any>>(obj: T): Partial<T> {
   return Object.fromEntries(
     Object.entries(obj).filter(([_, v]) => v !== null)
   ) as Partial<T>;
+}
+export function cleanNullToUndefined<T extends Record<string, any>>(obj: T): Partial<T> {
+  const result: Partial<T> = {};
+  for (const key in obj) {
+    const value = obj[key];
+    if (value !== null) {
+      result[key] = value;
+    }
+    // 如果是 null，就不加进去 => 变成 undefined
+  }
+  return result;
 }
