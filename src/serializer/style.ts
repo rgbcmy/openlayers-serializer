@@ -4,72 +4,23 @@ import Stroke from 'ol/style/Stroke';
 import CircleStyle from 'ol/style/Circle';
 import Icon from 'ol/style/Icon';
 import Text from 'ol/style/Text';
+import type { ISerializedCircle, ISerializedStyle,ISerializedFill,ISerializedIcon,ISerializedStroke,ISerializedText } from '../dto/style';
 
-export interface SerializedFill {
-  color: string | null;
-}
 
-export interface SerializedStroke {
-  color: string | null;
-  lineCap: CanvasLineCap | null;
-  lineJoin: CanvasLineJoin | null;
-  lineDash: number[] | null;
-  lineDashOffset: number | null;
-  miterLimit: number | null;
-  width: number | null;
-}
-
-export interface SerializedCircle {
-  radius: number;
-  fill: SerializedFill | null;
-  stroke: SerializedStroke | null;
-}
-
-export interface SerializedIcon {
-  src: string | null;
-  scale: number | [number, number] | null;
-  rotation: number | null;
-  opacity: number | null;
-  anchor: number[] | null;
-  //这两个参数暂时没有get函数
-  //   anchorXUnits: string | null;
-  //   anchorYUnits: string | null;
-  // 更多 Icon 相关参数可按需添加
-}
-
-export interface SerializedText {
-  font: string | null;
-  text: string | string[] | null;
-  offsetX: number | null;
-  offsetY: number | null;
-  fill: SerializedFill | null;
-  stroke: SerializedStroke | null;
-  scale: number | [number, number] | null;
-  rotation: number | null;
-  // 更多 Text 相关参数也可继续拓展
-}
-
-export interface SerializedStyle {
-  fill: SerializedFill | null;
-  stroke: SerializedStroke | null;
-  imageCircle: SerializedCircle | null;
-  imageIcon: SerializedIcon | null;
-  text: SerializedText | null;
-}
 
 function isValid<T>(value: T | null | undefined): value is T {
   return value !== null && value !== undefined;
 }
 
 // 序列化
-export function serializeStyle(style: Style): SerializedStyle {
+export function serializeStyle(style: Style): ISerializedStyle {
   const fill: Fill | null = style.getFill();
   const stroke: Stroke | null = style.getStroke();
   const image = style.getImage();
   const text: Text | null = style.getText();
 
-  let imageCircle: SerializedCircle | null = null;
-  let imageIcon: SerializedIcon | null = null;
+  let imageCircle: ISerializedCircle | null = null;
+  let imageIcon: ISerializedIcon | null = null;
 
   if (image instanceof CircleStyle) {
     imageCircle = {
@@ -105,7 +56,7 @@ export function serializeStyle(style: Style): SerializedStyle {
 }
 
 // 反序列化
-export function deserializeStyle(data: SerializedStyle): Style {
+export function deserializeStyle(data: ISerializedStyle): Style {
   const fill = isValid(data.fill?.color) ? new Fill({ color: data.fill.color! }) : undefined;
 
   const stroke = isValid(data.stroke?.color)
@@ -164,7 +115,7 @@ export function deserializeStyle(data: SerializedStyle): Style {
 }
 
 
-function serializeStroke(stroke: Stroke | null): SerializedStroke | null {
+function serializeStroke(stroke: Stroke | null): ISerializedStroke | null {
   if (!stroke) return null;
 
   return {
@@ -178,7 +129,7 @@ function serializeStroke(stroke: Stroke | null): SerializedStroke | null {
   };
 }
 
-function deserializeStroke(data: SerializedStroke | null): Stroke | undefined {
+function deserializeStroke(data: ISerializedStroke | null): Stroke | undefined {
   if (!data || !isValid(data.color)) return undefined;
 
   return new Stroke({
@@ -192,7 +143,7 @@ function deserializeStroke(data: SerializedStroke | null): Stroke | undefined {
   });
 }
 
-function serializeText(text: Text | null): SerializedText | null {
+function serializeText(text: Text | null): ISerializedText | null {
   if (!text) return null;
 
   return {
@@ -207,7 +158,7 @@ function serializeText(text: Text | null): SerializedText | null {
   };
 }
 
-function deserializeText(data: SerializedText | null): Text | undefined {
+function deserializeText(data: ISerializedText | null): Text | undefined {
   if (!data) return undefined;
 
   return new Text({
