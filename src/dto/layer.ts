@@ -99,4 +99,9 @@ export interface IGroupLayerData extends IBaseLayerData {
 export type ISerializedLayerData =
     | ITileLayerData
     | IVectorLayerData
-    | IGroupLayerData;
+    | IImageLayerData
+    | IWebGLTileData
+    | IHeatmapData
+    | IVectorTileData
+    | IGroupLayerData
+
