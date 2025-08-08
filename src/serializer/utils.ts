@@ -33,3 +33,22 @@ export function cleanNullToUndefined<T extends Record<string, any>>(obj: T): Par
   }
   return result;
 }
+
+export function serializeFunction(func: Function | undefined) {
+  if (!func) {
+    return undefined;
+  }
+  return func.toString();
+}
+
+export function deserializeFunction(funcStr: string | null) {
+  if (!funcStr) {
+    return undefined;
+  }
+  try {
+    return eval(`(${funcStr})`);
+  } catch (e) {
+    console.error('反序列化函数失败', e);
+    return undefined;
+  }
+}
