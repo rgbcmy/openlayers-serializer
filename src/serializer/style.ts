@@ -1,10 +1,13 @@
-import Style from 'ol/style/Style';
+import Style, { type StyleFunction, type StyleLike } from 'ol/style/Style';
 import Fill from 'ol/style/Fill';
 import Stroke from 'ol/style/Stroke';
 import CircleStyle from 'ol/style/Circle';
 import Icon from 'ol/style/Icon';
 import Text from 'ol/style/Text';
-import type { ISerializedCircle, ISerializedStyle,ISerializedFill,ISerializedIcon,ISerializedStroke,ISerializedText } from '../dto/style';
+import type { ISerializedCircle, ISerializedStyle, ISerializedFill, ISerializedIcon, ISerializedStroke, ISerializedText } from '../dto/style';
+import type { FlatStyle, FlatStyleLike, Rule } from 'ol/style/flat';
+// Add missing FlatStyle import
+import type { FeatureLike } from 'ol/Feature';
 
 
 
@@ -171,4 +174,76 @@ function deserializeText(data: ISerializedText | null): Text | undefined {
     scale: data.scale ?? undefined,
     rotation: data.rotation ?? undefined,
   });
+}
+
+
+export function serializeLayerStyle(style: StyleLike | FlatStyleLike) {
+
+  if (isStyle(style)) {
+    return  serializeStyle(style);
+  } else if (isStyleArray(style)) {
+    return style.map(serializeStyle);
+  } else if (isStyleFunction(style)) {
+    //return 'StyleFunction';
+    //TODO: 需要处理 StyleFunction 的序列化
+  } else if (isFlatStyle(style)) {
+    return style;
+  }
+  if (isFlatStyleArray(style)) {
+    //return 'FlatStyle[]'; 
+    return style;
+  } else if (isRuleArray(style)) {
+    return style;
+  } else {
+    throw new Error(`Unsupported style type!`);
+  }
+}
+
+
+
+
+// 判断是否是单个 Style 实例
+export function isStyle(value: any): value is Style {
+  return value instanceof Style;
+}
+
+// 判断是否是 Style[]
+export function isStyleArray(value: any): value is Style[] {
+  return Array.isArray(value) && value.every(v => v instanceof Style);
+}
+
+// 判断是否是 StyleFunction
+export function isStyleFunction(value: any): value is StyleFunction {
+  return typeof value === 'function';
+}
+
+// 判断是否是单个 FlatStyle
+export function isFlatStyle(value: any): value is FlatStyle {
+  return value != null
+    && typeof value === 'object'
+    && !(value instanceof Style)
+    && !Array.isArray(value)
+    && !('style' in value); // 不是规则对象
+}
+
+// 判断是否是 FlatStyle[]
+export function isFlatStyleArray(value: any): value is FlatStyle[] {
+  return Array.isArray(value) && value.every(v => isFlatStyle(v));
+}
+
+// 判断是否是 Rule[]
+export function isRuleArray(value: any): value is Rule[] {
+  return Array.isArray(value) && value.every(v => v && typeof v === 'object' && 'style' in v);
+}
+
+
+// 综合判断
+export function detectStyleType(value: any): string {
+  if (isStyle(value)) return 'Style';
+  if (isStyleArray(value)) return 'Style[]';
+  if (isStyleFunction(value)) return 'StyleFunction';
+  if (isFlatStyle(value)) return 'FlatStyle';
+  if (isFlatStyleArray(value)) return 'FlatStyle[]';
+  if (isRuleArray(value)) return 'Rule[]';
+  return 'Unknown';
 }

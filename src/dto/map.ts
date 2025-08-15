@@ -1,6 +1,6 @@
 import type { ISerializedView } from "./view";
 import type { ITileGrid } from "./source";
-import type {ISerializedLayer} from "./layer";
+import type {IBaseLayer, ISerializedLayer} from "./layer";
 export interface IMap{
     //控件列表
     controls:any[],
@@ -9,7 +9,7 @@ export interface IMap{
     //交互列表
     interactions:any[],
     keyboardEventTarget?: string,
-    layers:ISerializedLayer[],
+    layers:IBaseLayer[],
     maxTilesLoading?: number,
     moveTolerance?: number,
     overlays?:any[],

@@ -4,7 +4,7 @@ import type { IBaseLayer, IGroupLayer, ISerializedLayer, ITileLayer, IVectorLaye
 import LayerGroup from "ol/layer/Group";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
-import { serializeStyle } from "./style";
+import { serializeLayerStyle, serializeStyle } from "./style";
 import { serializeSource } from "./source";
 import type { IVectorSource } from "../dto/source";
 
@@ -47,9 +47,8 @@ function serializeLayer(layer: BaseLayer): IBaseLayer {
             (layerDto as IVectorLayer).updateWhileAnimating = layer.getUpdateWhileAnimating() ?? false;
             (layerDto as IVectorLayer).updateWhileInteracting = layer.getUpdateWhileInteracting() ?? false;
             let sourceDto = serializeSource(layer.getSource() as any);
-            (layerDto as IVectorLayer).source = (sourceDto as IVectorSource);
-            let styleDto = serializeStyle(layer.getStyle() as any);
-            (layerDto as IVectorLayer).style = styleDto;
+            let styleDto = serializeLayerStyle(layer.getStyle() as any);
+            (layerDto as IVectorLayer).style =(styleDto as any);
 
         }
         //todo other layer

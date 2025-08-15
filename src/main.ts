@@ -8,6 +8,9 @@ import { XYZ, Vector, VectorTile, BingMaps } from "ol/source";
 import { quadKey } from "ol/source/BingMaps";
 import { GeoJSON,WKT,WKB} from "ol/format";
 import type { TileCoord } from "ol/tilecoord";
+import { serializeMap } from "./serializer";
+import Style from "ol/style/Style";
+import Fill from "ol/style/Fill";
 let bingLayer = new TileLayer({
     source: new XYZ({
         //url: 'https://dev.virtualearth.net/REST/V1/Imagery/Metadata/Aerial?output=json&include=ImageryProviders&key=YourBingMapsKey',
@@ -27,14 +30,24 @@ let testVectorLayer =new VectorLayer({
         url: 'https://openlayers.org/data/vector/ecoregions.json',
         format: new GeoJSON(), 
     }),
-    style: {'fill-color': ['string', ['get', 'COLOR'], '#eee']}
+    style:{'fill-color': ['string', ['get', 'COLOR'], '#eee']}
+    // new Style({
+    //     fill:new Fill({
+    //         color: 'rgba(255, 255, 255, 0.6)'
+    //     })
+        
+    // })
 });
 let map: Map = new Map({
     target: 'mapContainer',
     view: new View({
         center: [0, 0],
         zoom: 2
-    }),
+    }), 
     controls: [],
     layers: [bingLayer,testVectorLayer]
 });
+setTimeout(() => {
+let mapDto=serializeMap(map);
+debugger
+}, 5000);
