@@ -11,8 +11,8 @@ import type { ISerializedCircle, ISerializedStyle,ISerializedFill,ISerializedIco
 function isValid<T>(value: T | null | undefined): value is T {
   return value !== null && value !== undefined;
 }
-
-// 序列化
+//TODO 需要兼容StyleLike 和 FlatStyleLike 目前只实现了StyleLike
+// 序列化 
 export function serializeStyle(style: Style): ISerializedStyle {
   const fill: Fill | null = style.getFill();
   const stroke: Stroke | null = style.getStroke();

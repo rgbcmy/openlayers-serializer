@@ -1,10 +1,13 @@
 import type { ISerializedStyle } from "./style";
 import Layer from "ol/layer/Layer";
 import TileLayer from "ol/layer/Tile";
+import type { IOGCMapTile, ITileArcGISRest, ITileJSON, ITileWMS, IVectorSource, IVectorTile, IWMTS, IXYZSource } from "./source";
 
 
-export interface IBaseLayerData {
+export interface IBaseLayer {
     type: string;
+    id: string;
+    name:string;
     className: string | null;
     opacity: number | null;
     visible: boolean | null;
@@ -17,7 +20,7 @@ export interface IBaseLayerData {
     background: string | null;
     properties?: { [key: string]: any } | null;
 }
-export interface IImageLayerData extends IBaseLayerData {
+export interface IImageLayer extends IBaseLayer {
     type: 'Image';
     source: {
         type: string;
@@ -26,16 +29,13 @@ export interface IImageLayerData extends IBaseLayerData {
 }
 
 
-export interface ITileLayerData extends IBaseLayerData {
+export interface ITileLayer extends IBaseLayer {
     type: 'Tile';
-    source: {
-        type: string;
-        url: string | null;
-    };
+    source: IXYZSource|ITileWMS|IWMTS|IOGCMapTile|ITileArcGISRest|ITileJSON|IVectorTile;
     preload: number | null;
     useInterimTilesOnError: boolean | null;
 }
-export interface IWebGLTileData extends IBaseLayerData {
+export interface IWebGLTile extends IBaseLayer {
     type: 'WebGLTile';
     style: ISerializedStyle | null;
     source: {
@@ -47,7 +47,7 @@ export interface IWebGLTileData extends IBaseLayerData {
     useInterimTilesOnError: boolean | null;
     cacheSize: number | null;
 }
-export interface IHeatmapData extends IBaseLayerData {
+export interface IHeatmap extends IBaseLayer {
     type: 'Heatmap';
     gradient: string[] | null;
     radius: number | null;
@@ -59,21 +59,18 @@ export interface IHeatmapData extends IBaseLayerData {
         features: any[];
     };
 }
-export interface IVectorLayerData extends IBaseLayerData {
+export interface IVectorLayer extends IBaseLayer {
     type: 'Vector';
     //这个是个函数后期添加
     //renderOrder
     renderBuffer: number | null;
     declutter: boolean | string | number | null;
-    source: {
-        type: 'GeoJSON';
-        features: any[];
-    };
+    source:IVectorSource
     style: ISerializedStyle | null;
     updateWhileAnimating: boolean | null;
     updateWhileInteracting: boolean | null;
 }
-export interface IVectorTileData extends IBaseLayerData {
+export interface IVectorTileLayer extends IBaseLayer {
     type: 'VectorTile';
     //这个是个函数后期添加
     //renderOrder
@@ -91,17 +88,17 @@ export interface IVectorTileData extends IBaseLayerData {
     useInterimTilesOnError: boolean | null;
 }
 
-export interface IGroupLayerData extends IBaseLayerData {
+export interface IGroupLayer extends IBaseLayer {
     type: 'Group';
-    layers: ISerializedLayerData[];
+    layers: IBaseLayer[];
 }
 
-export type ISerializedLayerData =
-    | ITileLayerData
-    | IVectorLayerData
-    | IImageLayerData
-    | IWebGLTileData
-    | IHeatmapData
-    | IVectorTileData
-    | IGroupLayerData
+export type ISerializedLayer =
+    | ITileLayer
+    | IVectorLayer
+    | IImageLayer
+    | IWebGLTile
+    | IHeatmap
+    | IVectorTile
+    | IGroupLayer
 

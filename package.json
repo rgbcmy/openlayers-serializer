@@ -15,5 +15,8 @@
   "packageManager": "yarn@4.5.0",
   "dependencies": {
     "ol": "9.2.4"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }
