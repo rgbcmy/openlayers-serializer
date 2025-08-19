@@ -4,11 +4,11 @@ import type { IBaseLayer, IGroupLayer, ISerializedLayer, ITileLayer, IVectorLaye
 import LayerGroup from "ol/layer/Group";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
-import { serializeLayerStyle, serializeStyle } from "./style";
-import { serializeSource } from "./source";
+import { deserializeStyle, serializeLayerStyle, serializeStyle } from "./style";
+import { deserializeSource, serializeSource } from "./source";
 import type { IVectorSource } from "../dto/source";
 
-function serializeLayer(layer: BaseLayer): IBaseLayer {
+export function serializeLayer(layer: BaseLayer): IBaseLayer {
     const layerDto: IBaseLayer = {
         type: "",
         id: layer.get('id') || '',
@@ -23,7 +23,7 @@ function serializeLayer(layer: BaseLayer): IBaseLayer {
         maxZoom: layer.getMaxZoom() ?? null,
         zIndex: layer.getZIndex() ?? null,
         background: (layer.getBackground() as string) ?? null,
-        properties: layer.getProperties() || null,
+        properties: getSerializableLayerProps(layer)|| null,
     };
 
     const name = layer.get('name');
@@ -64,7 +64,85 @@ function serializeLayer(layer: BaseLayer): IBaseLayer {
 
     return layerDto;
 }
+export function deserializeLayer(layerDto: IBaseLayer): BaseLayer {
+    let layer: BaseLayer;
+    if (layerDto.type === 'Group') {
+        layer = new LayerGroup({
+            layers: (layerDto as IGroupLayer).layers.map(deserializeLayer)
+        });
+    } else if (layerDto.type === 'Tile') {
+        let source=(layerDto as ITileLayer).source ? deserializeSource((layerDto as ITileLayer).source) : undefined
+        debugger
+        layer = new TileLayer({
+            className: layerDto.className??'ol-layer',
+            opacity: layerDto.opacity??1,
+            visible: layerDto.visible ?? true,
+            extent: layerDto.extent??undefined,
+            zIndex: layerDto.zIndex ?? undefined,
+            minResolution: layerDto.minResolution ?? undefined,
+            maxResolution: layerDto.maxResolution ?? undefined,
+            minZoom: layerDto.minZoom ?? undefined,
+            maxZoom: layerDto.maxZoom ?? undefined,
+            preload: (layerDto as ITileLayer).preload ?? 0,
+            source:  source ,
+            useInterimTilesOnError: (layerDto as ITileLayer).useInterimTilesOnError ?? true,
+            properties: layerDto.properties || {},
+           
+        });
+    } else if (layerDto.type === 'Vector') {
+        layer = new VectorLayer({
+            className: layerDto.className??'ol-layer',
+            opacity: layerDto.opacity??1,
+            visible: layerDto.visible ?? true,
+            extent: layerDto.extent??undefined,
+            zIndex: layerDto.zIndex ?? undefined,
+            minResolution: layerDto.minResolution ?? undefined,
+            maxResolution: layerDto.maxResolution ?? undefined,
+            minZoom: layerDto.minZoom ?? undefined,
+            maxZoom: layerDto.maxZoom ?? undefined, 
+            renderOrder: eval(`(${(layerDto as IVectorLayer).renderOrder})`)??undefined,
+            renderBuffer: (layerDto as IVectorLayer).renderBuffer??100,
+            source: (layerDto as IVectorLayer).source ? deserializeSource((layerDto as IVectorLayer).source) : undefined,
+            style:deserializeStyle((layerDto as IVectorLayer).style),
+            declutter: (layerDto as IVectorLayer).declutter??false,
+            background: layerDto.background ?? undefined,
+            updateWhileAnimating: (layerDto as IVectorLayer).updateWhileAnimating??false,
+            updateWhileInteracting: (layerDto as IVectorLayer).updateWhileInteracting??false,
+            properties: layerDto.properties || {},
+        });
+    } else {
+        throw new Error(`Unsupported layer type: ${layerDto.type}`);
+    }
+
+    return layer;
+}
 
 export function serializeMapLayers(map: Map): IBaseLayer[] {
     return map.getLayers().getArray().map(serializeLayer);
+}
+
+/**
+ * 提取可序列化的 layer 属性
+ * @param {ol.layer.Base} layer - OpenLayers 图层
+ * @param {string[]} excludeKeys - 需要排除的属性 key
+ * @returns {Object} 可安全 JSON.stringify 的属性对象
+ */
+export function getSerializableLayerProps(layer:BaseLayer, excludeKeys = []) {
+  const props = layer.getProperties();
+  const cleanProps:Record<string,any> = {};
+
+  // 默认要排除的字段
+  const defaultExcludes = ["map", "source"];
+  const excludes = new Set([...defaultExcludes, ...excludeKeys]);
+
+  Object.keys(props).forEach(key => {
+    const value = props[key];
+    // 跳过在排除列表中的字段，或者函数
+    if (excludes.has(key)) {
+      return;
+    }
+    cleanProps[key] = value;
+  });
+
+  return cleanProps;
 }

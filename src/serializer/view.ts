@@ -10,7 +10,7 @@ export function serializeView(view: View): ISerializedView {
         center: (view.getCenter() as [number, number]) ?? undefined,
 
         //constrainOnlyCenter: view.getConstrainOnlyCenter?.() ?? undefined,
-        constrainResolution: view.getConstrainResolution(),
+        constrainResolution: view.getConstrainResolution()??false,
         //constrainRotation: view.getConstrainRotation(),
         //enableRotation: view.getEnableRotation(),
         //extent: view.getExtent() ?? undefined,

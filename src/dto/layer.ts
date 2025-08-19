@@ -7,7 +7,7 @@ import type { IOGCMapTile, ITileArcGISRest, ITileJSON, ITileWMS, IVectorSource, 
 export interface IBaseLayer {
     type: string;
     id: string;
-    name:string;
+    name: string;
     className: string | null;
     opacity: number | null;
     visible: boolean | null;
@@ -19,6 +19,8 @@ export interface IBaseLayer {
     zIndex: number | null;
     background: string | null;
     properties?: { [key: string]: any } | null;
+    // 允许任意额外属性
+    [key: string]: any;
 }
 export interface IImageLayer extends IBaseLayer {
     type: 'Image';
@@ -31,7 +33,7 @@ export interface IImageLayer extends IBaseLayer {
 
 export interface ITileLayer extends IBaseLayer {
     type: 'Tile';
-    source: IXYZSource|ITileWMS|IWMTS|IOGCMapTile|ITileArcGISRest|ITileJSON|IVectorTile;
+    source: IXYZSource | ITileWMS | IWMTS | IOGCMapTile | ITileArcGISRest | ITileJSON | IVectorTile;
     preload: number | null;
     useInterimTilesOnError: boolean | null;
 }
@@ -61,19 +63,17 @@ export interface IHeatmap extends IBaseLayer {
 }
 export interface IVectorLayer extends IBaseLayer {
     type: 'Vector';
-    //这个是个函数后期添加
-    //renderOrder
+    renderOrder: string | null;
     renderBuffer: number | null;
     declutter: boolean | string | number | null;
-    source:IVectorSource
+    source: IVectorSource
     style: ISerializedStyle | null;
     updateWhileAnimating: boolean | null;
     updateWhileInteracting: boolean | null;
 }
 export interface IVectorTileLayer extends IBaseLayer {
     type: 'VectorTile';
-    //这个是个函数后期添加
-    //renderOrder
+    renderOrder: string | null;
     renderBuffer: number | null;
     renderMode: 'vector' | 'hybrid' | null;
     declutter: boolean | string | number | null;

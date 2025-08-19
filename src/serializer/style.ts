@@ -59,7 +59,8 @@ export function serializeStyle(style: Style): ISerializedStyle {
 }
 
 // 反序列化
-export function deserializeStyle(data: ISerializedStyle): Style {
+export function deserializeStyle(data: ISerializedStyle | null): Style | null {
+  if (!data) return null;
   const fill = isValid(data.fill?.color) ? new Fill({ color: data.fill.color! }) : undefined;
 
   const stroke = isValid(data.stroke?.color)
@@ -180,12 +181,13 @@ function deserializeText(data: ISerializedText | null): Text | undefined {
 export function serializeLayerStyle(style: StyleLike | FlatStyleLike) {
 
   if (isStyle(style)) {
-    return  serializeStyle(style);
+    return serializeStyle(style);
   } else if (isStyleArray(style)) {
     return style.map(serializeStyle);
   } else if (isStyleFunction(style)) {
     //return 'StyleFunction';
-    //TODO: 需要处理 StyleFunction 的序列化
+    //ToDo: 需要处理 StyleFunction 的序列化
+    return eval(`(${(style)})`)
   } else if (isFlatStyle(style)) {
     return style;
   }
@@ -200,6 +202,44 @@ export function serializeLayerStyle(style: StyleLike | FlatStyleLike) {
 }
 
 
+export function deserializeLayerStyle(style: any): StyleLike | FlatStyleLike | null {
+  if (!style) return null;
+
+  // 单个序列化 Style
+  if (isSerializedStyle(style)) {
+    return deserializeStyle(style);
+  }
+
+  // Style 数组
+  if (Array.isArray(style) && style.every(isSerializedStyle)) {
+    return style.map(deserializeStyle).filter(isValid);
+  }
+
+  // StyleFunction 字符串
+  if (typeof style === 'string' && style.startsWith('function')) {
+    try {
+      // eslint-disable-next-line no-eval
+      const fn: StyleFunction = eval(`(${style})`);
+      if (typeof fn === 'function') return fn;
+    } catch (err) {
+      console.error('Failed to eval StyleFunction:', err);
+      return null;
+    }
+  }
+
+  // FlatStyle / FlatStyle[]
+  if (isFlatStyle(style) || isFlatStyleArray(style) || isRuleArray(style)) {
+    return style;
+  }
+
+  console.warn('Unknown style format:', style);
+  return null;
+}
+
+// 类型保护，判断对象是否是序列化后的 Style
+function isSerializedStyle(value: any): value is ISerializedStyle {
+  return value && typeof value === 'object' && ('fill' in value || 'stroke' in value || 'imageCircle' in value || 'imageIcon' in value || 'text' in value);
+}
 
 
 // 判断是否是单个 Style 实例

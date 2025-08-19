@@ -14,5 +14,5 @@ export interface IMap{
     moveTolerance?: number,
     overlays?:any[],
     target?: string,
-    view?: ISerializedView
+    view: ISerializedView
 }

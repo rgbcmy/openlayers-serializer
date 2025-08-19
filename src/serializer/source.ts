@@ -7,8 +7,12 @@ import GeoJSON from 'ol/format/GeoJSON';
 import MVT from 'ol/format/MVT';
 import type { ISerializedSource, IVectorSource, IXYZSource } from '../dto/source';
 import type { Source, Tile } from 'ol/source';
-import { serializeFunction } from './utils';
-import type { TileGrid } from 'ol/tilegrid';
+import { deserializeFunction, serializeFunction } from './utils';
+// import type { TileGrid } from 'ol/tilegrid';
+import TileGrid from 'ol/tilegrid/TileGrid.js';
+import type { AttributionLike } from 'ol/source/Source';
+import type { Extent } from 'ol/extent';
+import type { Size } from 'ol/size';
 
 export function serializeSource(source: Source): ISerializedSource {
   if (source instanceof XYZ) {
@@ -34,12 +38,12 @@ export function serializeSource(source: Source): ISerializedSource {
       maxResolution: source.get('maxResolution'),//这个是用来创建 tileGrid 的,但是没有get方法，如果没有传入 tileGrid
       tileGrid: tileGridDto,
       // TileGrid type 
-      tileLoadFunction: serializeFunction(source.getTileLoadFunction),//((url: string, image: HTMLImageElement) => void)
+      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),//((url: string, image: HTMLImageElement) => void)
       //这个不存储，因为不同的设备像素比率不同
       //tilePixelRatio: source.getTilePixelRatio() ?? 1,
       tileSize: (tileGrid as any)['tileSize_'],
       gutter: source.getGutter() ?? 0,
-      tileUrlFunction: serializeFunction(source.getTileUrlFunction),//((tileCoord: [number, number, number], pixelRatio: number, projection: string) => string) | null;
+      tileUrlFunction: serializeFunction(source.getTileUrlFunction()),//((tileCoord: [number, number, number], pixelRatio: number, projection: string) => string) | null;
       url: source.get('Url'),
       urls: source.getUrls(),
       wrapX: source.getWrapX() ?? true,
@@ -48,7 +52,7 @@ export function serializeSource(source: Source): ISerializedSource {
     };
     return sourceDto
   }
- 
+
   //todo
   if (source instanceof OSM) {
     return {
@@ -92,9 +96,48 @@ export function serializeSource(source: Source): ISerializedSource {
 }
 
 export function deserializeSource(data: ISerializedSource): any {
+  debugger
   switch (data.type) {
     case 'XYZ':
-      return new XYZ({ url: data.url ?? '' });
+      let xyzSourceDto = data as IXYZSource
+      let tileUrlFunction=xyzSourceDto.tileUrlFunction?eval("("+xyzSourceDto.tileUrlFunction+")"):undefined;
+      let tileLoadFunction=xyzSourceDto.tileLoadFunction?eval("("+xyzSourceDto.tileLoadFunction+")"):undefined;
+      debugger
+      return new XYZ({
+        attributions: xyzSourceDto.attributions as AttributionLike,
+        attributionsCollapsible: xyzSourceDto.attributionsCollapsible ?? true,
+        cacheSize: xyzSourceDto.cacheSize ?? undefined,
+        crossOrigin: xyzSourceDto.crossOrigin,
+        interpolate: xyzSourceDto.interpolate ?? true,
+        opaque: xyzSourceDto.opaque ?? false,
+        projection: xyzSourceDto.projection ?? "EPSG:3857",
+        reprojectionErrorThreshold: xyzSourceDto.reprojectionErrorThreshold ?? 0.5,
+        maxZoom: xyzSourceDto.maxZoom ?? 42,
+        minZoom: xyzSourceDto.minZoom ?? 0,
+        maxResolution: xyzSourceDto.maxResolution ?? undefined,
+        tileGrid: xyzSourceDto.tileGrid
+          ? new TileGrid({
+            extent:(xyzSourceDto.tileGrid.extent as Extent),
+            minZoom:xyzSourceDto.tileGrid.minZoom??0,
+            origin:xyzSourceDto.tileGrid.origin??undefined,
+            origins:xyzSourceDto.tileGrid.origins??undefined,
+            resolutions:xyzSourceDto.tileGrid.resolutions??[],
+            sizes:xyzSourceDto.tileGrid.sizes as Size[],
+            tileSize:xyzSourceDto.tileGrid.tileSize??undefined,
+            tileSizes:xyzSourceDto.tileGrid.tileSizes??undefined
+          })
+          : undefined,
+        tileLoadFunction:tileLoadFunction,
+        tilePixelRatio:xyzSourceDto.tilePixelRatio??1,
+        tileSize:(xyzSourceDto.tileSize as Size)??[256,256],
+        gutter:xyzSourceDto.gutter??0,
+        tileUrlFunction:tileUrlFunction,
+        url:xyzSourceDto.url??undefined,
+         urls: data.urls ?? [],
+        wrapX:xyzSourceDto.wrapX??true,
+        transition:xyzSourceDto.transition??250,
+        zDirection:xyzSourceDto.zDirection??0 
+      });
 
     case 'OSM':
       return new OSM();
