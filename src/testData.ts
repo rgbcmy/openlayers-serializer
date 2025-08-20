@@ -1,13 +1,13 @@
 import type { IMap } from "./dto/map";
 
-export const mapDto:IMap = {
+export const mapDto:IMap ={
     "controls": [],
     "interactions": [],
     "layers": [
         {
             "type": "Tile",
-            "id": "",
-            "name": "",
+            "id": "fbf1618a-2b66-49ad-aecc-5e4b46252502",
+            "name": "Untitled",
             "className": "ol-layer",
             "opacity": 1,
             "visible": true,
@@ -280,7 +280,7 @@ export const mapDto:IMap = {
                 "tileLoadFunction": "function defaultTileLoadFunction(imageTile, src) {\n  imageTile.getImage().src = src;\n}",
                 "tileSize": 256,
                 "gutter": 0,
-                "tileUrlFunction": "function(tileCoord, pixelRatio, projection) {\n      debugger;\n      return \"ttps://webst01.is.autonavi.com/appmaptile?style=6&x={1}&y={1}&z={1}\";\n    }",
+                "tileUrlFunction": "function(tileCoord, pixelRatio, projection) {\n        let imageUrl = \"http://ecn.t1.tiles.virtualearth.net/tiles/a{q}.jpeg?g=1\";\n        let url = new URL(\n          //imageUrl.replace('{quadkey}', quadKey(tileCoord)),\n          imageUrl.replace(\"{q}\", quadKey(tileCoord))\n        );\n        return url.toString();\n      }",
                 "urls": null,
                 "wrapX": true,
                 "transition": 250,
@@ -289,8 +289,8 @@ export const mapDto:IMap = {
         },
         {
             "type": "Tile",
-            "id": "",
-            "name": "",
+            "id": "31d406f8-003b-43a7-b888-acaf8b701aa1",
+            "name": "Untitled",
             "className": "ol-layer",
             "opacity": 1,
             "visible": true,
@@ -574,8 +574,8 @@ export const mapDto:IMap = {
         },
         {
             "type": "Vector",
-            "id": "",
-            "name": "",
+            "id": "6f34c933-f5b4-4006-9a17-f3aa17a7ec8c",
+            "name": "Untitled",
             "className": "ol-layer",
             "opacity": 1,
             "visible": true,
@@ -598,6 +598,16 @@ export const mapDto:IMap = {
             "declutter": false,
             "updateWhileAnimating": false,
             "updateWhileInteracting": false,
+            "source": {
+                "type": "Vector",
+                "attributions": null,
+                "format": "GeoJSON",
+                "overlaps": true,
+                "strategy": "all",
+                "url": "https://openlayers.org/data/vector/ecoregions.json",
+                "useSpatialIndex": true,
+                "wrapX": true
+            },
             "style": {
                 "fill-color": [
                     "string",
@@ -608,6 +618,41 @@ export const mapDto:IMap = {
                     "#eee"
                 ]
             }
+        },
+        {
+            "type": "Image",
+            "id": "fdb0bc5c-8c06-431a-840e-cae9a3a79981",
+            "name": "Untitled",
+            "className": "ol-layer",
+            "opacity": 1,
+            "visible": true,
+            "extent": null,
+            "minResolution": 0,
+            "maxResolution": null,
+            "minZoom": null,
+            "maxZoom": null,
+            "zIndex": null,
+            "background": null,
+            "properties": {
+                "opacity": 1,
+                "visible": true,
+                "maxResolution": null,
+                "minResolution": 0,
+                "minZoom": null,
+                "maxZoom": null
+            },
+            "source": {
+                "type": "ImageStatic",
+                "imageExtent": [
+                    -8237642.318702245,
+                    4865942.279503176,
+                    -8126322.827908971,
+                    5012341.663847518
+                ],
+                "interpolate": true,
+                "projection": "EPSG:3857",
+                "url": "https://imgs.xkcd.com/comics/online_communities.png"
+            }
         }
     ],
     "maxTilesLoading": 16,
@@ -615,8 +660,8 @@ export const mapDto:IMap = {
     "target": "mapContainer",
     "view": {
         "center": [
-            7164111.74198514,
-            4310188.705239089
+            0,
+            0
         ],
         "constrainResolution": false,
         "maxResolution": 156543.03392804097,
@@ -624,9 +669,9 @@ export const mapDto:IMap = {
         "maxZoom": 28,
         "minZoom": 0,
         "projection": "EPSG:3857",
-        "resolution": 10088.255898599573,
+        "resolution": 20959.736760239794,
         "resolutions": null,
         "rotation": 0,
-        "zoom": 3.955810629089458
+        "zoom": 2.9008668079807487
     }
 }

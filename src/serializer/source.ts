@@ -5,7 +5,17 @@ import VectorSource from 'ol/source/Vector';
 import VectorTile from 'ol/source/VectorTile';
 import GeoJSON from 'ol/format/GeoJSON';
 import MVT from 'ol/format/MVT';
-import type { ISerializedSource, IVectorSource, IXYZSource } from '../dto/source';
+import WKT from 'ol/format/WKT';
+import TopoJSON from 'ol/format/TopoJSON';
+import GPX from 'ol/format/GPX';
+import IGC from 'ol/format/IGC';
+import KML from 'ol/format/KML';
+import OSMXML from 'ol/format/OSMXML';
+import Polyline from 'ol/format/Polyline';
+import type {
+  ISerializedSource, IVectorSource, IXYZSource, IOGCMapTile, ITileArcGISRest, ITileWMS, ITileJSON,
+  IImageStatic, IImageWMS, IImageArcGISRest
+} from '../dto/source';
 import type { Source, Tile } from 'ol/source';
 import { deserializeFunction, serializeFunction } from './utils';
 // import type { TileGrid } from 'ol/tilegrid';
@@ -13,6 +23,15 @@ import TileGrid from 'ol/tilegrid/TileGrid.js';
 import type { AttributionLike } from 'ol/source/Source';
 import type { Extent } from 'ol/extent';
 import type { Size } from 'ol/size';
+import { all, bbox, tile } from 'ol/loadingstrategy'
+import type { TileCoord } from 'ol/tilecoord';
+import type { Projection } from 'ol/proj';
+import { quadKey } from "ol/source/BingMaps";
+import { registerFunction, registry } from '../common/registry';
+//注册全局函数
+registerFunction('quadKey', quadKey);
+//矢量数据源加载策略
+
 
 export function serializeSource(source: Source): ISerializedSource {
   if (source instanceof XYZ) {
@@ -59,24 +78,39 @@ export function serializeSource(source: Source): ISerializedSource {
       type: 'OSM',
     };
   }
-  //TODO
   if (source instanceof ImageStatic) {
     return {
       type: 'ImageStatic',
-      url: source.getUrl?.() ?? '',
+      attributions: (source.getAttributions() as any),
+      crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'), //|| 'anonymous',
       imageExtent: source.getImageExtent() as [number, number, number, number],
+      //todo
+      //imageLoadFunction:source.
+      interpolate: source.getInterpolate() ?? true,
+      projection: source.getProjection()?.getCode() ?? "EPSG:3857",
+      url: source.getUrl(),
     };
   }
-  //TODO
   if (source instanceof VectorSource) {
+
     let sourceDto: IVectorSource = {
       type: 'Vector',
       attributions: (source.getAttributions() as any) ?? null,
       //attributionsCollapsible: source.getAttributionsCollapsible() ?? true,
       //projection: source.getProjection()?.getCode() ?? "EPSG:3857",
       //wrapX: source.getWrapX() ?? true,
-      features: new GeoJSON().writeFeaturesObject(source.getFeatures()),
-      format: source.getFormat() ? source.getFormat()!.getType() : 'GeoJSON',
+      //features: new GeoJSON().writeFeaturesObject(source.getFeatures()),
+      //TODO
+      //features:undefined,
+      //TODO
+      //loader;undefined,
+      format: serializeFormat(source.getFormat()),
+      overlaps: source.getOverlaps() ?? true,
+      strategy: getBuiltInStrategyName(source['strategy_'] ?? all),
+      url: source.getUrl()?.toString() ?? undefined,
+      useSpatialIndex: source['featuresRtree_'] ? true : false,
+      wrapX: source.getWrapX()
+      //loader:undefined
     };
     return sourceDto
     // return {
@@ -96,13 +130,15 @@ export function serializeSource(source: Source): ISerializedSource {
 }
 
 export function deserializeSource(data: ISerializedSource): any {
-  debugger
+
   switch (data.type) {
     case 'XYZ':
       let xyzSourceDto = data as IXYZSource
-      let tileUrlFunction=xyzSourceDto.tileUrlFunction?eval("("+xyzSourceDto.tileUrlFunction+")"):undefined;
-      let tileLoadFunction=xyzSourceDto.tileLoadFunction?eval("("+xyzSourceDto.tileLoadFunction+")"):undefined;
-      debugger
+      //let tileUrlFunction = xyzSourceDto.tileUrlFunction ? eval("(" + xyzSourceDto.tileUrlFunction + ")") : undefined;
+      let tileUrlFunction = xyzSourceDto.tileUrlFunction ? injectFunction(xyzSourceDto.tileUrlFunction) : undefined;
+      let tileLoadFunction = xyzSourceDto.tileLoadFunction ? eval("(" + xyzSourceDto.tileLoadFunction + ")") : undefined;
+
+
       return new XYZ({
         attributions: xyzSourceDto.attributions as AttributionLike,
         attributionsCollapsible: xyzSourceDto.attributionsCollapsible ?? true,
@@ -117,26 +153,26 @@ export function deserializeSource(data: ISerializedSource): any {
         maxResolution: xyzSourceDto.maxResolution ?? undefined,
         tileGrid: xyzSourceDto.tileGrid
           ? new TileGrid({
-            extent:(xyzSourceDto.tileGrid.extent as Extent),
-            minZoom:xyzSourceDto.tileGrid.minZoom??0,
-            origin:xyzSourceDto.tileGrid.origin??undefined,
-            origins:xyzSourceDto.tileGrid.origins??undefined,
-            resolutions:xyzSourceDto.tileGrid.resolutions??[],
-            sizes:xyzSourceDto.tileGrid.sizes as Size[],
-            tileSize:xyzSourceDto.tileGrid.tileSize??undefined,
-            tileSizes:xyzSourceDto.tileGrid.tileSizes??undefined
+            extent: (xyzSourceDto.tileGrid.extent as Extent),
+            minZoom: xyzSourceDto.tileGrid.minZoom ?? 0,
+            origin: xyzSourceDto.tileGrid.origin ?? undefined,
+            origins: xyzSourceDto.tileGrid.origins ?? undefined,
+            resolutions: xyzSourceDto.tileGrid.resolutions ?? [],
+            sizes: xyzSourceDto.tileGrid.sizes as Size[],
+            tileSize: xyzSourceDto.tileGrid.tileSize ?? undefined,
+            tileSizes: xyzSourceDto.tileGrid.tileSizes ?? undefined
           })
           : undefined,
-        tileLoadFunction:tileLoadFunction,
-        tilePixelRatio:xyzSourceDto.tilePixelRatio??1,
-        tileSize:(xyzSourceDto.tileSize as Size)??[256,256],
-        gutter:xyzSourceDto.gutter??0,
-        tileUrlFunction:tileUrlFunction,
-        url:xyzSourceDto.url??undefined,
-         urls: data.urls ?? [],
-        wrapX:xyzSourceDto.wrapX??true,
-        transition:xyzSourceDto.transition??250,
-        zDirection:xyzSourceDto.zDirection??0 
+        tileLoadFunction: tileLoadFunction,
+        tilePixelRatio: xyzSourceDto.tilePixelRatio ?? 1,
+        tileSize: (xyzSourceDto.tileSize as Size) ?? [256, 256],
+        gutter: xyzSourceDto.gutter ?? 0,
+        tileUrlFunction: tileUrlFunction,
+        url: xyzSourceDto.url ?? undefined,
+        urls: data.urls ?? undefined,
+        wrapX: xyzSourceDto.wrapX ?? true,
+        transition: xyzSourceDto.transition ?? 250,
+        zDirection: xyzSourceDto.zDirection ?? 0
       });
 
     case 'OSM':
@@ -148,16 +184,36 @@ export function deserializeSource(data: ISerializedSource): any {
     //     imageExtent: data.imageExtent,
     //   });
 
-    // case 'GeoJSON':
-    //   return new VectorSource({
-    //     features: new GeoJSON().readFeatures(data.features),
-    //   });
+    case 'Vector':
+      let vectorSourceDto = data as IVectorSource;
+      return new VectorSource({
+        attributions: vectorSourceDto.attributions as AttributionLike,
+        format: deserializeFormat(vectorSourceDto.format as FormatName),
+        //TODO
+        //features:undefined,
+        //TODO
+        //loader;undefined,
+        overlaps: vectorSourceDto.overlaps ?? true,
+        strategy: (getBuiltInStrategyByName(vectorSourceDto.strategy as BuiltInStrategyName) as any),
+        url: vectorSourceDto.url ?? undefined,
+        useSpatialIndex: vectorSourceDto.useSpatialIndex ?? true,
+        wrapX: vectorSourceDto.wrapX ?? true
+        //features: new GeoJSON().readFeatures(data.features),
+        //loader
+      });
 
-    // case 'MVT':
-    //   return new VectorTileSource({
-    //     url: data.url,
-    //     format: new MVT(),
-    //   });
+    case 'ImageStatic':
+      let ImageStaticSource = new ImageStatic({
+        attributions: data.attributions as AttributionLike,
+        crossOrigin: data.crossOrigin,
+        imageExtent: data.imageExtent,
+        //todo
+        //imageLoadFunction:undefined,
+        interpolate: data.interpolate ?? true,
+        projection: data.projection ?? "EPSG:3857",
+        url: data.url ?? "",
+      });
+      return ImageStaticSource
 
     default:
       // Type assertion to ensure data has a 'type' property
@@ -200,4 +256,89 @@ function serializeTileGrid(tileGrid: TileGrid): any {
     tileSizes: tileGrid['tileSizes_']
   } as any
   return res;
+}
+
+
+/**
+ * 将完整函数声明字符串转为可调用函数，并注入注册表函数
+ * @param functionCode 完整函数声明字符串，例如：
+ * "function(a, b) { return a + b + helper(a); }"
+ */
+export function injectFunction(functionCode: string) {
+  const injectedArgs = Object.keys(registry).join(',');
+  const wrapper = `
+    (function(${injectedArgs}) {
+      return ${functionCode};
+    })
+  `;
+
+  const fnFactory = eval(wrapper);
+  return fnFactory(...Object.values(registry));
+}
+
+
+type BuiltInStrategyName = 'all' | 'bbox' | 'tile';
+
+const builtInStrategies: Record<BuiltInStrategyName, Function> = {
+  all,
+  bbox,
+  tile
+};
+
+export function getBuiltInStrategyName(fn: Function): BuiltInStrategyName | undefined {
+  for (const [name, f] of Object.entries(builtInStrategies)) {
+    if (fn === f) return name as BuiltInStrategyName;
+  }
+  return undefined;
+}
+
+// 从名字 → 函数引用
+export function getBuiltInStrategyByName(name: BuiltInStrategyName): Function {
+  return builtInStrategies[name];
+}
+
+
+
+
+// 格式名字类型（可扩展）
+export type FormatName =
+  | 'GeoJSON'
+  | 'MVT'
+  | 'WKT'
+  | 'TopoJSON'
+  | 'GPX'
+  | 'IGC'
+  | 'KML'
+  | 'OSMXML'
+  | 'Polyline';
+
+// 注册表：名字 -> 构造器
+const formatRegistry: Record<FormatName, new (...args: any[]) => any> = {
+  GeoJSON,
+  MVT,
+  WKT,
+  TopoJSON,
+  GPX,
+  IGC,
+  KML,
+  OSMXML,
+  Polyline,
+};
+
+// 序列化：实例 -> 名字
+export function serializeFormat(format: any): FormatName | undefined {
+  for (const [name, Ctor] of Object.entries(formatRegistry)) {
+    if (format instanceof Ctor) {
+      return name as FormatName;
+    }
+  }
+  return undefined;
+}
+
+// 反序列化：名字 -> 实例
+export function deserializeFormat(name: FormatName, options?: any): any {
+
+  const Ctor = formatRegistry[name];
+  if (!Ctor) throw new Error(`Unknown format: ${name}`);
+  return new Ctor(options);
 }

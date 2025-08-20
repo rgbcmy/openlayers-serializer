@@ -30,7 +30,8 @@ export function deserializeMap(mapDto: IMap): Map {
         view: view,
         layers:layers,
         controls: mapDto.controls || [],
-        interactions: mapDto.interactions || [],
+        //TODO interactions 交互设置
+        interactions: undefined,// mapDto.interactions || undefined,
         overlays: mapDto.overlays || [],
         maxTilesLoading: mapDto.maxTilesLoading,
         moveTolerance: mapDto.moveTolerance

@@ -1,7 +1,7 @@
 import type { ISerializedStyle } from "./style";
 import Layer from "ol/layer/Layer";
 import TileLayer from "ol/layer/Tile";
-import type { IOGCMapTile, ITileArcGISRest, ITileJSON, ITileWMS, IVectorSource, IVectorTile, IWMTS, IXYZSource } from "./source";
+import type { IImageStatic, IOGCMapTile, ITileArcGISRest, ITileJSON, ITileWMS, IVectorSource, IVectorTile, IWMTS, IXYZSource } from "./source";
 
 
 export interface IBaseLayer {
@@ -24,10 +24,8 @@ export interface IBaseLayer {
 }
 export interface IImageLayer extends IBaseLayer {
     type: 'Image';
-    source: {
-        type: string;
-        url: string | null;
-    };
+    //todo 支持更多source
+    source:IImageStatic
 }
 
 

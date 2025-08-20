@@ -14,7 +14,7 @@ import type { FeatureLike } from 'ol/Feature';
 function isValid<T>(value: T | null | undefined): value is T {
   return value !== null && value !== undefined;
 }
-//TODO 需要兼容StyleLike 和 FlatStyleLike 目前只实现了StyleLike
+//兼容StyleLike 和 FlatStyleLike 目前只实现了StyleLike
 // 序列化 
 export function serializeStyle(style: Style): ISerializedStyle {
   const fill: Fill | null = style.getFill();
