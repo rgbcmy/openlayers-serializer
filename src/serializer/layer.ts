@@ -8,6 +8,7 @@ import { deserializeLayerStyle, deserializeStyle, serializeLayerStyle, serialize
 import { deserializeSource, serializeSource } from "./source";
 import type { IVectorSource } from "../dto/source";
 import ImageLayer from "ol/layer/Image";
+import WebGLTileLayer from 'ol/layer/WebGLTile';
 
 
 export function serializeLayer(layer: BaseLayer): IBaseLayer {
@@ -58,6 +59,10 @@ export function serializeLayer(layer: BaseLayer): IBaseLayer {
             layerDto.type = 'Image';
             let sourceDto = serializeSource(layer.getSource() as any);
             (layerDto as IImageLayer).source = sourceDto as any;
+        }else if(layer instanceof WebGLTileLayer){
+            //todo
+            layerDto.type = 'WebGLTile';
+            
         }
 
         //todo other layer

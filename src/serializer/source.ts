@@ -16,7 +16,7 @@ import type {
   ISerializedSource, IVectorSource, IXYZSource, IOGCMapTile, ITileArcGISRest, ITileWMS, ITileJSON,
   IImageStatic, IImageWMS, IImageArcGISRest
 } from '../dto/source';
-import type { Source, Tile } from 'ol/source';
+import { ImageArcGISRest, type Source, type Tile } from 'ol/source';
 import { deserializeFunction, serializeFunction } from './utils';
 // import type { TileGrid } from 'ol/tilegrid';
 import TileGrid from 'ol/tilegrid/TileGrid.js';
@@ -47,7 +47,7 @@ export function serializeSource(source: Source): ISerializedSource {
       attributionsCollapsible: source.getAttributionsCollapsible() ?? true,
       //这个暂时不动
       cacheSize: null,
-      crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin') || 'anonymous',
+      crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'),// || 'anonymous',
       interpolate: source.getInterpolate() ?? true,
       opaque: ((source as any).opaque_) || source.get('opaque') || false,
       projection: source.getProjection()?.getCode() ?? "EPSG:3857",
@@ -78,6 +78,25 @@ export function serializeSource(source: Source): ISerializedSource {
       type: 'OSM',
     };
   }
+  //todo
+  if (source instanceof ImageArcGISRest) {
+    let sourceDto: IImageArcGISRest = {
+      type: 'ImageArcGISRest',
+      attributions: (source.getAttributions() as any) ?? null,
+      crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'),
+      hidpi: source['hidpi_']??true,
+      //todo
+      //imageLoadFunction:undefined,
+      interpolate: source.getInterpolate()??true,
+      params: source.getParams(),
+      projection: source.getProjection()?.getCode() ?? "EPSG:3857",
+      ratio: source['ratio_']??1.5,
+      resolutions:source.getResolutions(),
+      url: source.getUrl()
+    }
+    return sourceDto;
+  }
+
   if (source instanceof ImageStatic) {
     return {
       type: 'ImageStatic',
@@ -92,7 +111,6 @@ export function serializeSource(source: Source): ISerializedSource {
     };
   }
   if (source instanceof VectorSource) {
-
     let sourceDto: IVectorSource = {
       type: 'Vector',
       attributions: (source.getAttributions() as any) ?? null,
@@ -113,10 +131,6 @@ export function serializeSource(source: Source): ISerializedSource {
       //loader:undefined
     };
     return sourceDto
-    // return {
-    //   type: 'GeoJSON',
-    //   features: new GeoJSON().writeFeaturesObject(source.getFeatures()),
-    // };
   }
 
   if (source instanceof VectorTile) {
@@ -202,19 +216,21 @@ export function deserializeSource(data: ISerializedSource): any {
         //loader
       });
 
-    case 'ImageStatic':
-      let ImageStaticSource = new ImageStatic({
+    case 'ImageArcGISRest':
+      let ImageArcGISRestSource = new ImageArcGISRest({
         attributions: data.attributions as AttributionLike,
         crossOrigin: data.crossOrigin,
-        imageExtent: data.imageExtent,
+        hidpi: data.hidpi??true,
         //todo
         //imageLoadFunction:undefined,
         interpolate: data.interpolate ?? true,
+        params:data.params as any,
         projection: data.projection ?? "EPSG:3857",
-        url: data.url ?? "",
+        ratio:data.ratio??1.5,
+        resolutions:data.resolutions??undefined,
+        url: data.url
       });
-      return ImageStaticSource
-
+      return ImageArcGISRestSource
     default:
       // Type assertion to ensure data has a 'type' property
       throw new Error(`Unsupported source type: ${(data as ISerializedSource).type}`);
