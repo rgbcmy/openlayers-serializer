@@ -14,9 +14,11 @@ import OSMXML from 'ol/format/OSMXML';
 import Polyline from 'ol/format/Polyline';
 import type {
   ISerializedSource, IVectorSource, IXYZSource, IOGCMapTile, ITileArcGISRest, ITileWMS, ITileJSON,
-  IImageStatic, IImageWMS, IImageArcGISRest
+  IImageStatic, IImageWMS, IImageArcGISRest,
+  IGeoTIFF,
+  IUTFGrid
 } from '../dto/source';
-import { ImageArcGISRest, type Source, type Tile } from 'ol/source';
+import { GeoTIFF, ImageArcGISRest, ImageWMS, OGCMapTile, Source, UTFGrid, type Tile } from 'ol/source';
 import { deserializeFunction, serializeFunction } from './utils';
 // import type { TileGrid } from 'ol/tilegrid';
 import TileGrid from 'ol/tilegrid/TileGrid.js';
@@ -28,6 +30,8 @@ import type { TileCoord } from 'ol/tilecoord';
 import type { Projection } from 'ol/proj';
 import { quadKey } from "ol/source/BingMaps";
 import { registerFunction, registry } from '../common/registry';
+import type { ServerType } from 'ol/source/wms';
+import type { SourceInfo } from 'ol/source/GeoTIFF';
 //注册全局函数
 registerFunction('quadKey', quadKey);
 //矢量数据源加载策略
@@ -72,26 +76,77 @@ export function serializeSource(source: Source): ISerializedSource {
     return sourceDto
   }
 
+  if (source instanceof GeoTIFF) {
+    return {
+      type: "GeoTIFF",
+      sources: source['sourceInfo_'] ?? [],
+      sourceOptions: source['sourceOptions_'],
+      convertToRGB: source.convertToRGB_ ?? false,
+      normalize: source['normalize_'] ?? true,
+      opaque: source['opaque_'] ?? false,
+      projection: source.getProjection()?.getCode() ?? "EPSG:3857",
+      transition: ((source as any).tileOptions.transition) || source.get('transition') || 250,
+      wrapX: source.getWrapX() ?? false,
+      interpolate: source.getInterpolate() ?? true
+    }
+
+  }
+  if (source instanceof UTFGrid) {
+    return {
+      type: "UTFGrid",
+      preemptive: source['preemptive_'] ?? true,
+      jsonp: source['jsonp_'] ?? false,
+      //todo 暂时无法获取tileJSON
+      tileJSON: source.get('tileJSON'),
+      //todo 暂时无法获取url
+      url: source.get('url'),
+
+      wrapX: source.getWrapX() ?? true,
+      zDirection: (source.zDirection as any) ?? 0
+    }
+  }
+  if (source instanceof OGCMapTile) {
+    return {
+      type: "OGCMapTile",
+      //todo 无法获取url
+      url: source.get('url'),
+      //todo 无法获取context
+      context: source.get('context'),
+      //todo 无法获取mediaType
+      mediaType: source.get('mediaType'),
+      projection: source.getProjection()?.getCode() ?? "EPSG:3857",
+      attributions: (source.getAttributions() as any),
+      cacheSize: undefined,
+      crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'),
+      interpolate: source.getInterpolate() ?? true,
+      reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
+      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      wrapX: source.getWrapX() ?? true,
+      transition: ((source as any).tileOptions.transition) || source.get('transition') || 250,
+      //todo 无法获取collections
+      collections:source.get('collections')
+    }
+  }
+
   //todo
   if (source instanceof OSM) {
     return {
       type: 'OSM',
     };
   }
-  //todo
   if (source instanceof ImageArcGISRest) {
     let sourceDto: IImageArcGISRest = {
       type: 'ImageArcGISRest',
       attributions: (source.getAttributions() as any) ?? null,
       crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'),
-      hidpi: source['hidpi_']??true,
+      hidpi: source['hidpi_'] ?? true,
       //todo
       //imageLoadFunction:undefined,
-      interpolate: source.getInterpolate()??true,
+      interpolate: source.getInterpolate() ?? true,
       params: source.getParams(),
       projection: source.getProjection()?.getCode() ?? "EPSG:3857",
-      ratio: source['ratio_']??1.5,
-      resolutions:source.getResolutions(),
+      ratio: source['ratio_'] ?? 1.5,
+      resolutions: source.getResolutions(),
       url: source.getUrl()
     }
     return sourceDto;
@@ -110,6 +165,26 @@ export function serializeSource(source: Source): ISerializedSource {
       url: source.getUrl(),
     };
   }
+  if (source instanceof ImageWMS) {
+    return {
+      type: 'ImageWMS',
+      attributions: (source.getAttributions() as any),
+      crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'), //|| 'anonymous',
+      hidpi: source['hidpi_'] ?? true,
+      serverType: source['serverType_'],
+      //todo
+      //imageLoadFunction:undefined
+      interpolate: source.getInterpolate() ?? true,
+      params: source.getParams(),
+      projection: source.getProjection()?.getCode() ?? "EPSG:3857",
+      //todo
+      //imageLoadFunction:source.
+      ratio: source['ratio_'] ?? 1.5,
+      resolutions: source.getResolutions(),
+      url: source.getUrl(),
+    };
+  }
+
   if (source instanceof VectorSource) {
     let sourceDto: IVectorSource = {
       type: 'Vector',
@@ -150,7 +225,7 @@ export function deserializeSource(data: ISerializedSource): any {
       let xyzSourceDto = data as IXYZSource
       //let tileUrlFunction = xyzSourceDto.tileUrlFunction ? eval("(" + xyzSourceDto.tileUrlFunction + ")") : undefined;
       let tileUrlFunction = xyzSourceDto.tileUrlFunction ? injectFunction(xyzSourceDto.tileUrlFunction) : undefined;
-      let tileLoadFunction = xyzSourceDto.tileLoadFunction ? eval("(" + xyzSourceDto.tileLoadFunction + ")") : undefined;
+      let tileLoadFunction = xyzSourceDto.tileLoadFunction ? injectFunction(xyzSourceDto.tileLoadFunction ): undefined;
 
 
       return new XYZ({
@@ -188,15 +263,60 @@ export function deserializeSource(data: ISerializedSource): any {
         transition: xyzSourceDto.transition ?? 250,
         zDirection: xyzSourceDto.zDirection ?? 0
       });
-
+    case 'GeoTIFF':
+      let geoTIFFSourceDto = data as IGeoTIFF
+      let geoTIFFSource = new GeoTIFF({
+        sources: (geoTIFFSourceDto.sources as SourceInfo[]),
+        sourceOptions: geoTIFFSourceDto.sourceOptions,
+        convertToRGB: geoTIFFSourceDto.convertToRGB ?? 'auto',
+        normalize: geoTIFFSourceDto.normalize ?? true,
+        opaque: geoTIFFSourceDto.opaque ?? false,
+        projection: geoTIFFSourceDto.projection,
+        transition: geoTIFFSourceDto.transition ?? 250,
+        wrapX: geoTIFFSourceDto.wrapX ?? false,
+        interpolate: geoTIFFSourceDto.interpolate ?? true
+      })
+      return geoTIFFSource;
     case 'OSM':
       return new OSM();
-
-    // case 'ImageStatic':
-    //   return new ImageStatic({
-    //     url: data.url,
-    //     imageExtent: data.imageExtent,
-    //   });
+    case 'UTFGrid':
+      let utfGridDto=data as IUTFGrid
+      return new UTFGrid({
+        preemptive:utfGridDto.preemptive??true,
+        jsonp:utfGridDto.jsonp??false,
+        tileJSON:utfGridDto.tileJSON,
+        url:utfGridDto.url,
+        wrapX:utfGridDto.wrapX,
+        zDirection:utfGridDto.zDirection??0
+      })
+    case 'OGCMapTile':
+      let oGCMapTileSourceDto= data as IOGCMapTile;
+      return new OGCMapTile({
+        url:oGCMapTileSourceDto.url,
+        context:oGCMapTileSourceDto.context,
+        mediaType:oGCMapTileSourceDto.mediaType??undefined,
+        projection:oGCMapTileSourceDto.projection?? "EPSG:3857",
+        attributions:oGCMapTileSourceDto.attributions as AttributionLike,
+        cacheSize:oGCMapTileSourceDto.cacheSize??undefined,
+        crossOrigin:oGCMapTileSourceDto.crossOrigin,
+        interpolate:oGCMapTileSourceDto.interpolate??true,
+        reprojectionErrorThreshold:oGCMapTileSourceDto.reprojectionErrorThreshold??0.5,
+        tileLoadFunction:oGCMapTileSourceDto.tileLoadFunction ? injectFunction(oGCMapTileSourceDto.tileLoadFunction ): undefined,
+        wrapX:oGCMapTileSourceDto.wrapX??true,
+        transition:oGCMapTileSourceDto.transition??undefined,
+        collections:oGCMapTileSourceDto.collections??undefined
+      })
+    case 'ImageStatic':
+      return new ImageStatic({
+        attributions: data.attributions as AttributionLike,
+        crossOrigin: data.crossOrigin,
+        imageExtent: data.imageExtent,
+        interpolate: data.interpolate ?? true,
+        projection: data.projection ?? "EPSG:3857",
+        url: data.url ?? "",
+        //todo
+        //imageLoadFunction:data.imageLoadFunction
+      });
 
     case 'Vector':
       let vectorSourceDto = data as IVectorSource;
@@ -220,17 +340,33 @@ export function deserializeSource(data: ISerializedSource): any {
       let ImageArcGISRestSource = new ImageArcGISRest({
         attributions: data.attributions as AttributionLike,
         crossOrigin: data.crossOrigin,
-        hidpi: data.hidpi??true,
+        hidpi: data.hidpi ?? true,
         //todo
         //imageLoadFunction:undefined,
         interpolate: data.interpolate ?? true,
-        params:data.params as any,
+        params: data.params as any,
         projection: data.projection ?? "EPSG:3857",
-        ratio:data.ratio??1.5,
-        resolutions:data.resolutions??undefined,
+        ratio: data.ratio ?? 1.5,
+        resolutions: data.resolutions ?? undefined,
         url: data.url
       });
       return ImageArcGISRestSource
+    case 'ImageWMS':
+      let ImageWMSSource = new ImageWMS({
+        attributions: data.attributions as AttributionLike,
+        crossOrigin: data.crossOrigin,
+        hidpi: data.hidpi ?? true,
+        serverType: data.serverType as ServerType,
+        //todo
+        //imageLoadFunction:undefined,
+        interpolate: data.interpolate ?? true,
+        params: data.params as any,
+        projection: data.projection ?? "EPSG:3857",
+        ratio: data.ratio ?? 1.5,
+        resolutions: data.resolutions ?? undefined,
+        url: data.url
+      });
+      return ImageWMSSource
     default:
       // Type assertion to ensure data has a 'type' property
       throw new Error(`Unsupported source type: ${(data as ISerializedSource).type}`);

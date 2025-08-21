@@ -10,6 +10,8 @@ export type ISerializedSource =
   | IImageArcGISRest
   | IImageStatic
   | IImageWMS
+  | IGeoTIFF
+  | IUTFGrid
   | IVectorSource
   | ICluster;
 
@@ -170,7 +172,27 @@ export interface IVectorTile extends ISource {
   wrapX?: boolean | null;
   zDirection?: number | null;
 }
-
+export interface IGeoTIFF extends ISource {
+  type: "GeoTIFF";
+  sources: ISourceInfo[];
+  sourceOptions?: IGeoTIFFSourceOptions;
+  convertToRGB?: boolean | 'auto';
+  normalize: boolean;
+  opaque: boolean;
+  projection: string;
+  transition: number;
+  wrapX: boolean;
+  interpolate: boolean
+}
+export interface IUTFGrid extends ISource {
+  type: "UTFGrid";
+  preemptive: boolean;
+  jsonp: boolean;
+  tileJSON?: IConfig;
+  url?: string;
+  wrapX: boolean;
+  zDirection?: number | null;
+}
 export interface IOSMSource extends ISource {
   type: 'OSM';
 }
@@ -180,7 +202,7 @@ export interface IImageArcGISRest extends ISource {
   attributions?: string[] | string | null;
   crossOrigin?: string | null;
   hidpi?: boolean | null;
-  imageLoadFunction?:string; //((url: string, image: HTMLImageElement) => void) | null;
+  imageLoadFunction?: string; //((url: string, image: HTMLImageElement) => void) | null;
   interpolate?: boolean | null;
   params?: Record<string, any> | null;
   projection?: string | null;
@@ -258,4 +280,66 @@ export interface IWMTSTileGrid extends ITileGrid {
   sizes?: [number, number][] | null;
   tileSize?: [number, number] | null;
   tileSizes?: [number, number][] | null;
+}
+
+
+
+export interface ISourceInfo {
+  url?: string | null,
+  overviews?: string[] | null,
+  blob?: Blob | null,
+  min: number,
+  max?: number | null,
+  nodata?: number | null,
+  bands?: number[] | null
+}
+export interface IGeoTIFFSourceOptions {
+  forceXHR: boolean
+  headers?: Record<string, string>
+  credentials?: string,
+  maxRanges?: number,
+  allowFullFile: boolean,
+  blockSize: number,
+  cacheSize: number
+}
+
+export interface IConfig {
+  /** The name. */
+  name?: string;
+
+  /** The description. */
+  description?: string;
+
+  /** The version. */
+  version?: string;
+
+  /** The attribution. */
+  attribution?: string;
+
+  /** The template. */
+  template?: string;
+
+  /** The legend. */
+  legend?: string;
+
+  /** The scheme. */
+  scheme?: string;
+
+  /** The tile URL templates. */
+  tiles: string[];
+
+  /** Optional grids. */
+  grids?: string[];
+
+  /** Minimum zoom level. */
+  minzoom?: number;
+
+  /** Maximum zoom level. */
+  maxzoom?: number;
+
+  /** Optional bounds. */
+  bounds?: number[];
+
+  /** Optional center. */
+  center?: number[];
 }
