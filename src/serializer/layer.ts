@@ -1,6 +1,6 @@
 import Map from "ol/Map";
 import type BaseLayer from "ol/layer/Base";
-import type { IBaseLayer, IGroupLayer, IImageLayer, ISerializedLayer, ITileLayer, IVectorLayer } from "../dto";
+import type { IBaseLayer, IGroupLayer, IImageLayer, ISerializedLayer, ITileLayer, IVectorLayer, IVectorTileLayer } from "../dto";
 import LayerGroup from "ol/layer/Group";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
@@ -9,6 +9,8 @@ import { deserializeSource, serializeSource } from "./source";
 import type { IVectorSource } from "../dto/source";
 import ImageLayer from "ol/layer/Image";
 import WebGLTileLayer from 'ol/layer/WebGLTile';
+import VectorTileLayer from "ol/layer/VectorTile";
+import type { StyleLike } from "ol/style/Style";
 
 
 export function serializeLayer(layer: BaseLayer): IBaseLayer {
@@ -138,6 +140,34 @@ export function deserializeLayer(layerDto: IBaseLayer): BaseLayer {
             minZoom: layerDto.minZoom ?? undefined,
             maxZoom: layerDto.maxZoom ?? undefined,
             source: source,
+            properties: layerDto.properties || {},
+
+        });
+    }else if(layerDto.type === 'VectorTile'){
+        //todo
+         let source = (layerDto as IVectorTileLayer).source ? deserializeSource((layerDto as IVectorTileLayer).source) : undefined
+
+        layer = new VectorTileLayer({
+             className: layerDto.className ?? 'ol-layer',
+            opacity: layerDto.opacity ?? 1,
+            visible: layerDto.visible ?? true,
+            extent: layerDto.extent ?? undefined,
+            zIndex: layerDto.zIndex ?? undefined,
+            minResolution: layerDto.minResolution ?? undefined,
+            maxResolution: layerDto.maxResolution ?? undefined,
+            minZoom: layerDto.minZoom ?? undefined,
+            maxZoom: layerDto.maxZoom ?? undefined,
+            renderOrder: eval(`(${(layerDto as IVectorTileLayer).renderOrder})`) ?? undefined,
+            renderBuffer: (layerDto as IVectorTileLayer).renderBuffer ?? 100,
+            renderMode:(layerDto as IVectorTileLayer).renderBuffer as any,
+            source: (layerDto as IVectorTileLayer).source ? deserializeSource((layerDto as IVectorTileLayer).source) : undefined,
+            //todo 需要验证
+            style: deserializeLayerStyle((layerDto as IVectorTileLayer).style) as any,
+            declutter: (layerDto as IVectorTileLayer).declutter ?? false,
+            background: layerDto.background ?? undefined,
+            updateWhileAnimating: (layerDto as IVectorTileLayer).updateWhileAnimating ?? false,
+            updateWhileInteracting: (layerDto as IVectorTileLayer).updateWhileInteracting ?? false,
+            useInterimTilesOnError:(layerDto as IVectorTileLayer).useInterimTilesOnError??false,
             properties: layerDto.properties || {},
 
         });

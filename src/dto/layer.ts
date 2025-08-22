@@ -75,10 +75,7 @@ export interface IVectorTileLayer extends IBaseLayer {
     renderBuffer: number | null;
     renderMode: 'vector' | 'hybrid' | null;
     declutter: boolean | string | number | null;
-    source: {
-        type: 'GeoJSON';
-        features: any[];
-    };
+    source: IVectorTile
     style: ISerializedStyle | null;
     updateWhileAnimating: boolean | null;
     updateWhileInteracting: boolean | null;

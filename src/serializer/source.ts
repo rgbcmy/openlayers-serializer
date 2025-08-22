@@ -13,12 +13,14 @@ import KML from 'ol/format/KML';
 import OSMXML from 'ol/format/OSMXML';
 import Polyline from 'ol/format/Polyline';
 import type {
-  ISerializedSource, IVectorSource, IXYZSource, IOGCMapTile, ITileArcGISRest, ITileWMS, ITileJSON,
+  ISerializedSource, IVectorSource, IXYZSource, IOGCMapTile, ITileArcGISRest, ITileWMS, ITileJSON, IZoomify,
   IImageStatic, IImageWMS, IImageArcGISRest,
   IGeoTIFF,
-  IUTFGrid
+  IUTFGrid,
+  ITileGrid,
+  IWMTSTileGrid
 } from '../dto/source';
-import { GeoTIFF, ImageArcGISRest, ImageWMS, OGCMapTile, Source, UTFGrid, type Tile } from 'ol/source';
+import { GeoTIFF, ImageArcGISRest, ImageWMS, OGCMapTile, OGCVectorTile, Source, TileArcGISRest, TileJSON, TileWMS, UTFGrid, WMTS, Zoomify, type Tile } from 'ol/source';
 import { deserializeFunction, serializeFunction } from './utils';
 // import type { TileGrid } from 'ol/tilegrid';
 import TileGrid from 'ol/tilegrid/TileGrid.js';
@@ -32,6 +34,7 @@ import { quadKey } from "ol/source/BingMaps";
 import { registerFunction, registry } from '../common/registry';
 import type { ServerType } from 'ol/source/wms';
 import type { SourceInfo } from 'ol/source/GeoTIFF';
+import type WMTSTileGrid from 'ol/tilegrid/WMTS';
 //注册全局函数
 registerFunction('quadKey', quadKey);
 //矢量数据源加载策略
@@ -58,6 +61,7 @@ export function serializeSource(source: Source): ISerializedSource {
       reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
       maxZoom: source.getTileGrid()?.getMaxZoom() || source.get('maxZoom') || 42,//它会用来创建 tileGrid，如果tileGrid没有传入
       minZoom: source.getTileGrid()?.getMinZoom() || source.get('minZoom') || 0,
+      //todo
       maxResolution: source.get('maxResolution'),//这个是用来创建 tileGrid 的,但是没有get方法，如果没有传入 tileGrid
       tileGrid: tileGridDto,
       // TileGrid type 
@@ -67,7 +71,8 @@ export function serializeSource(source: Source): ISerializedSource {
       tileSize: (tileGrid as any)['tileSize_'],
       gutter: source.getGutter() ?? 0,
       tileUrlFunction: serializeFunction(source.getTileUrlFunction()),//((tileCoord: [number, number, number], pixelRatio: number, projection: string) => string) | null;
-      url: source.get('Url'),
+      //todo
+      url: source.get('url'),
       urls: source.getUrls(),
       wrapX: source.getWrapX() ?? true,
       transition: ((source as any).tileOptions.transition) || source.get('transition') || 250,
@@ -75,7 +80,147 @@ export function serializeSource(source: Source): ISerializedSource {
     };
     return sourceDto
   }
+  if (source instanceof TileArcGISRest) {
+    let tileGrid = source.getTileGrid();
+    let tileGridDto
+    if (tileGrid) {
+      tileGridDto = serializeTileGrid(tileGrid);
+    }
+    return {
+      type: "TileArcGISRest",
+      attributions: (source.getAttributions() as any) ?? null,
+      cacheSize: null,
+      crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'),// || 'anonymous',
+      interpolate: source.getInterpolate() ?? true,
+      params: source.getParams(),
+      hidpi: source['hidpi_'] ?? true,
+      tileGrid: tileGridDto,
+      projection: source.getProjection()?.getCode() ?? "EPSG:3857",
+      reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
+      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      //todo
+      url: source.get('url'),
+      wrapX: source.getWrapX() ?? true,
+      transition: ((source as any).tileOptions.transition) || source.get('transition'),
+      urls: source.getUrls(),
+      zDirection: (source.zDirection as any) ?? 0,
+    }
+  }
+  if (source instanceof TileJSON) {
+    return {
+      type: "TileJSON",
+      attributions: (source.getAttributions() as any) ?? null,
+      cacheSize: null,
+      crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'),// || 'anonymous',
+      interpolate: source.getInterpolate() ?? true,
+      //todo 
+      jsonp: source.get('jsonp') ?? false,
+      reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
+      tileJson: source.getTileJSON(),
+      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      tileSize: source['tileSize_'],
+      //todo
+      url: source.get('url'),
+      wrapX: source.getWrapX() ?? true,
+      transition: ((source as any).tileOptions.transition) || source.get('transition'),
+      zDirection: (source.zDirection as any) ?? 0,
+    }
+  }
+  if (source instanceof TileWMS) {
+    let tileGrid = source.getTileGrid();
+    let tileGridDto
+    if (tileGrid) {
+      tileGridDto = serializeTileGrid(tileGrid);
+    }
+    return {
+      type: "TileWMS",
+      attributions: (source.getAttributions() as any) ?? null,
+      cacheSize: null,
+      crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'),// || 'anonymous',
+      interpolate: source.getInterpolate() ?? true,
+      params: source.getParams(),
+      gutter: source.getGutter() ?? 0,
+      hidpi: source['hidpi_'] ?? true,
+      projection: source.getProjection()?.getCode() ?? "EPSG:3857",
+      reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
+      //todo
+      //tileClass:source['tileClass']
+      tileGrid: tileGridDto,
+      serverType: source['serverType_'],
+      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      //todo
+      url: source.get('url'),
+      urls: source.getUrls(),
+      wrapX: source.getWrapX() ?? true,
+      transition: ((source as any).tileOptions.transition) || source.get('transition'),
+      zDirection: (source.zDirection as any) ?? 0,
+    }
+  }
 
+  if (source instanceof WMTS) {
+    let wmtsTileGrid = source.getTileGrid() as WMTSTileGrid;
+    let wmtsTileGridDto
+    if (wmtsTileGrid) {
+      wmtsTileGridDto = serializeWMTTileGrid(wmtsTileGrid);
+    }
+    return {
+      type: "WMTS",
+      attributions: (source.getAttributions() as any) ?? null,
+      attributionsCollapsible: source.getAttributionsCollapsible() ?? true,
+      //这个暂时不动
+      cacheSize: null,
+      crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'),// || 'anonymous',
+      interpolate: source.getInterpolate() ?? true,
+      tileGrid: wmtsTileGridDto,
+      projection: source.getProjection()?.getCode() ?? "EPSG:3857",
+      reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
+      requestEncoding: source.getRequestEncoding(),
+      layer: source.getLayer(),
+      style: source.getStyle(),
+      //todo
+      //tileClass:source['tileClass']
+      tilePixelRatio: source['tilePixelRatio_'] ?? 1,
+      format: source.getFormat() ?? 'image/jpeg',
+      version: source.getVersion() ?? '1.0.0',
+      matrixSet: source.getMatrixSet(),
+      dimensions: source.getDimensions(),
+      //todo url
+      url: source.get('url'),
+      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      urls: source.getUrls(),
+      wrapX: source.getWrapX() ?? true,
+      transition: ((source as any).tileOptions.transition) || source.get('transition'),
+      zDirection: (source.zDirection as any) ?? 0,
+    }
+  }
+  if (source instanceof Zoomify) {
+    let tileGrid = source.getTileGrid();
+    let tileGridDto
+    if (tileGrid) {
+      tileGridDto = serializeTileGrid(tileGrid);
+    }
+    return {
+      type: "Zoomify",
+      attributions: (source.getAttributions() as any) ?? null,
+      cacheSize: null,
+      crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'),// || 'anonymous',
+      interpolate: source.getInterpolate() ?? true,
+      projection: source.getProjection()?.getCode() ?? "EPSG:3857",
+      tilePixelRatio: source['tilePixelRatio_'] ?? 1,
+      reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
+      url: source.get('url'),
+      //todo
+      tierSizeCalculation: source.get('tierSizeCalculation'),
+      //todo
+      size: source.get('size'),
+      extent: tileGrid?.getExtent() as [number, number, number, number],
+      transition: ((source as any).tileOptions.transition) || source.get('transition'),
+      //todo
+      tileSize: tileGrid?.getTileSize(0) as any,
+      zDirection: (source.zDirection as any) ?? 0,
+    }
+
+  }
   if (source instanceof GeoTIFF) {
     return {
       type: "GeoTIFF",
@@ -124,7 +269,7 @@ export function serializeSource(source: Source): ISerializedSource {
       wrapX: source.getWrapX() ?? true,
       transition: ((source as any).tileOptions.transition) || source.get('transition') || 250,
       //todo 无法获取collections
-      collections:source.get('collections')
+      collections: source.get('collections')
     }
   }
 
@@ -189,9 +334,7 @@ export function serializeSource(source: Source): ISerializedSource {
     let sourceDto: IVectorSource = {
       type: 'Vector',
       attributions: (source.getAttributions() as any) ?? null,
-      //attributionsCollapsible: source.getAttributionsCollapsible() ?? true,
-      //projection: source.getProjection()?.getCode() ?? "EPSG:3857",
-      //wrapX: source.getWrapX() ?? true,
+      //todo
       //features: new GeoJSON().writeFeaturesObject(source.getFeatures()),
       //TODO
       //features:undefined,
@@ -209,12 +352,72 @@ export function serializeSource(source: Source): ISerializedSource {
   }
 
   if (source instanceof VectorTile) {
-    // return {
-    //   type: 'MVT',
-    //   url: source.getUrls()?.[0] ?? '',
-    // };
-  }
+    let tileGrid = source.getTileGrid();
+    let tileGridDto
+    if (tileGrid) {
+      tileGridDto = serializeTileGrid(tileGrid);
+    }
+    return {
+      type: 'VectorTile',
+      attributions: (source.getAttributions() as any),
 
+      attributionsCollapsible: source.getAttributionsCollapsible() ?? true,
+      cacheSize: null,
+      extent: source.getTileGrid()?.getExtent() as [number, number, number, number],
+      format: serializeFormat(source['format_']),
+      overlaps: source.getOverlaps() ?? true,
+      projection: source.getProjection()?.getCode(),
+      //无需序列化
+      //state:undefined
+      //todo
+      //tileClass:source['tileClass']
+      maxZoom: source.getTileGrid()?.getMaxZoom() || source.get('maxZoom') || 42,//它会用来创建 tileGrid，如果tileGrid没有传入
+      minZoom: source.getTileGrid()?.getMinZoom() || source.get('minZoom') || 0,
+      tileSize: (tileGrid as any)['tileSize_'],
+      //todo
+      maxResolution: source.get('maxResolution'),//这个是用来创建 tileGrid 的,但是没有get方法，如果没有传入 tileGrid
+      tileGrid: tileGridDto,
+      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      tileUrlFunction: serializeFunction(source.getTileUrlFunction()),
+      //todo
+      url: source.get('url'),
+      transition: ((source as any).tileOptions.transition) || source.get('transition') || 250,
+      urls: source.getUrls(),
+      wrapX: source.getWrapX() ?? true,
+      zDirection: (source.zDirection as any) ?? 0
+    };
+  }
+  if (source instanceof OGCVectorTile) {
+    let tileGrid = source.getTileGrid();
+    let tileGridDto
+    if (tileGrid) {
+      tileGridDto = serializeTileGrid(tileGrid);
+    }
+    return {
+      type: 'OGCVectorTile',
+      //todo
+      url: source.get('url'),
+      //todo 暂时无法获取
+      context:source.get('context'),
+      format: serializeFormat(source['format_']),
+      //todo 无法获取
+      mediaType:source.get('mediaType'),
+    
+      attributions: (source.getAttributions() as any),
+      attributionsCollapsible: source.getAttributionsCollapsible() ?? true,
+      cacheSize: null,
+      overlaps: source.getOverlaps() ?? true,
+      projection: source.getProjection()?.getCode(),
+      //todo
+      //tileClass:source['tileClass']
+      transition: ((source as any).tileOptions.transition) || source.get('transition') || 250,
+      wrapX: source.getWrapX() ?? true,
+      zDirection: (source.zDirection as any) ?? 0,
+      //todo 暂时无法获取
+      collections:source.get('collections')
+     
+    };
+  }
   throw new Error('Unsupported source type');
 }
 
@@ -225,7 +428,7 @@ export function deserializeSource(data: ISerializedSource): any {
       let xyzSourceDto = data as IXYZSource
       //let tileUrlFunction = xyzSourceDto.tileUrlFunction ? eval("(" + xyzSourceDto.tileUrlFunction + ")") : undefined;
       let tileUrlFunction = xyzSourceDto.tileUrlFunction ? injectFunction(xyzSourceDto.tileUrlFunction) : undefined;
-      let tileLoadFunction = xyzSourceDto.tileLoadFunction ? injectFunction(xyzSourceDto.tileLoadFunction ): undefined;
+      let tileLoadFunction = xyzSourceDto.tileLoadFunction ? injectFunction(xyzSourceDto.tileLoadFunction) : undefined;
 
 
       return new XYZ({
@@ -263,6 +466,34 @@ export function deserializeSource(data: ISerializedSource): any {
         transition: xyzSourceDto.transition ?? 250,
         zDirection: xyzSourceDto.zDirection ?? 0
       });
+    case  'TileArcGISRest':
+        let tileArcGISRestSourceDto = data as ITileArcGISRest
+        return new TileArcGISRest({
+          attributions:tileArcGISRestSourceDto.attributions as AttributionLike,
+          cacheSize:tileArcGISRestSourceDto.cacheSize??undefined,
+          crossOrigin:tileArcGISRestSourceDto.crossOrigin,
+          interpolate:tileArcGISRestSourceDto.interpolate??true,
+          params:tileArcGISRestSourceDto.params as any,
+          hidpi:tileArcGISRestSourceDto.hidpi??true,
+          tileGrid:tileArcGISRestSourceDto.tileGrid?new TileGrid({
+            extent: (tileArcGISRestSourceDto.tileGrid.extent as Extent),
+            minZoom: tileArcGISRestSourceDto.tileGrid.minZoom ?? 0,
+            origin: tileArcGISRestSourceDto.tileGrid.origin ?? undefined,
+            origins: tileArcGISRestSourceDto.tileGrid.origins ?? undefined,
+            resolutions: tileArcGISRestSourceDto.tileGrid.resolutions ?? [],
+            sizes: tileArcGISRestSourceDto.tileGrid.sizes as Size[],
+            tileSize: tileArcGISRestSourceDto.tileGrid.tileSize ?? undefined,
+            tileSizes: tileArcGISRestSourceDto.tileGrid.tileSizes ?? undefined
+          }):undefined,
+          projection:tileArcGISRestSourceDto.projection as any,
+          reprojectionErrorThreshold:tileArcGISRestSourceDto.reprojectionErrorThreshold??0.5,
+          tileLoadFunction:tileArcGISRestSourceDto.tileLoadFunction ? injectFunction(tileArcGISRestSourceDto.tileLoadFunction) : undefined,
+          url:tileArcGISRestSourceDto.url,
+          wrapX:tileArcGISRestSourceDto.wrapX??true,
+          transition:tileArcGISRestSourceDto.transition??undefined,
+          urls:tileArcGISRestSourceDto.urls??undefined,
+          zDirection:tileArcGISRestSourceDto.zDirection??0
+        })
     case 'GeoTIFF':
       let geoTIFFSourceDto = data as IGeoTIFF
       let geoTIFFSource = new GeoTIFF({
@@ -280,31 +511,31 @@ export function deserializeSource(data: ISerializedSource): any {
     case 'OSM':
       return new OSM();
     case 'UTFGrid':
-      let utfGridDto=data as IUTFGrid
+      let utfGridDto = data as IUTFGrid
       return new UTFGrid({
-        preemptive:utfGridDto.preemptive??true,
-        jsonp:utfGridDto.jsonp??false,
-        tileJSON:utfGridDto.tileJSON,
-        url:utfGridDto.url,
-        wrapX:utfGridDto.wrapX,
-        zDirection:utfGridDto.zDirection??0
+        preemptive: utfGridDto.preemptive ?? true,
+        jsonp: utfGridDto.jsonp ?? false,
+        tileJSON: utfGridDto.tileJSON,
+        url: utfGridDto.url,
+        wrapX: utfGridDto.wrapX,
+        zDirection: utfGridDto.zDirection ?? 0
       })
     case 'OGCMapTile':
-      let oGCMapTileSourceDto= data as IOGCMapTile;
+      let oGCMapTileSourceDto = data as IOGCMapTile;
       return new OGCMapTile({
-        url:oGCMapTileSourceDto.url,
-        context:oGCMapTileSourceDto.context,
-        mediaType:oGCMapTileSourceDto.mediaType??undefined,
-        projection:oGCMapTileSourceDto.projection?? "EPSG:3857",
-        attributions:oGCMapTileSourceDto.attributions as AttributionLike,
-        cacheSize:oGCMapTileSourceDto.cacheSize??undefined,
-        crossOrigin:oGCMapTileSourceDto.crossOrigin,
-        interpolate:oGCMapTileSourceDto.interpolate??true,
-        reprojectionErrorThreshold:oGCMapTileSourceDto.reprojectionErrorThreshold??0.5,
-        tileLoadFunction:oGCMapTileSourceDto.tileLoadFunction ? injectFunction(oGCMapTileSourceDto.tileLoadFunction ): undefined,
-        wrapX:oGCMapTileSourceDto.wrapX??true,
-        transition:oGCMapTileSourceDto.transition??undefined,
-        collections:oGCMapTileSourceDto.collections??undefined
+        url: oGCMapTileSourceDto.url,
+        context: oGCMapTileSourceDto.context,
+        mediaType: oGCMapTileSourceDto.mediaType ?? undefined,
+        projection: oGCMapTileSourceDto.projection ?? "EPSG:3857",
+        attributions: oGCMapTileSourceDto.attributions as AttributionLike,
+        cacheSize: oGCMapTileSourceDto.cacheSize ?? undefined,
+        crossOrigin: oGCMapTileSourceDto.crossOrigin,
+        interpolate: oGCMapTileSourceDto.interpolate ?? true,
+        reprojectionErrorThreshold: oGCMapTileSourceDto.reprojectionErrorThreshold ?? 0.5,
+        tileLoadFunction: oGCMapTileSourceDto.tileLoadFunction ? injectFunction(oGCMapTileSourceDto.tileLoadFunction) : undefined,
+        wrapX: oGCMapTileSourceDto.wrapX ?? true,
+        transition: oGCMapTileSourceDto.transition ?? undefined,
+        collections: oGCMapTileSourceDto.collections ?? undefined
       })
     case 'ImageStatic':
       return new ImageStatic({
@@ -335,6 +566,8 @@ export function deserializeSource(data: ISerializedSource): any {
         //features: new GeoJSON().readFeatures(data.features),
         //loader
       });
+    case 'VectorTile':
+      return
 
     case 'ImageArcGISRest':
       let ImageArcGISRestSource = new ImageArcGISRest({
@@ -389,27 +622,48 @@ function calculateOriginalSizes(extent: number[], resolutions: number[], tileSiz
   });
 }
 
-function serializeTileGrid(tileGrid: TileGrid): any {
+function serializeTileGrid(tileGrid: TileGrid): ITileGrid {
   let originalSizes = calculateOriginalSizes(
     tileGrid?.getExtent()!,
     tileGrid?.getResolutions()!,
     (tileGrid as any).tileSizes_ || [(tileGrid as any).tileSize_] // 从实例取 tileSizes
   );
-  let res = {
-    extent: tileGrid.getExtent(),
+  let res: ITileGrid = {
+    extent: tileGrid.getExtent() as [number, number, number, number],
     minZoom: tileGrid.getMinZoom(),
-    origin: tileGrid.getOrigin(tileGrid.getMinZoom() ?? 0),
+    origin: tileGrid.getOrigin(tileGrid.getMinZoom() ?? 0) as [number, number],
     origins: tileGrid['origins_'], // TileGrid type
     resolutions: tileGrid.getResolutions(),
+
     //设置每个层级的瓦片大小，建议不保存，还是保存下来吧，通过extent和origin会自动计算
     sizes: originalSizes,
-    tileSize: tileGrid.getTileSize(0),
+    tileSize: tileGrid.getTileSize(0) as any,
     //todo 验证是否真的获取到
     tileSizes: tileGrid['tileSizes_']
-  } as any
+  }
   return res;
 }
-
+function serializeWMTTileGrid(tileGrid: WMTSTileGrid): IWMTSTileGrid {
+  let originalSizes = calculateOriginalSizes(
+    tileGrid?.getExtent()!,
+    tileGrid?.getResolutions()!,
+    (tileGrid as any).tileSizes_ || [(tileGrid as any).tileSize_] // 从实例取 tileSizes
+  );
+  let res: IWMTSTileGrid = {
+    extent: tileGrid.getExtent() as [number, number, number, number],
+    minZoom: tileGrid.getMinZoom(),
+    origin: tileGrid.getOrigin(tileGrid.getMinZoom() ?? 0) as [number, number],
+    origins: tileGrid['origins_'], // TileGrid type
+    resolutions: tileGrid.getResolutions(),
+    matrixIds: tileGrid.getMatrixIds(),
+    //设置每个层级的瓦片大小，建议不保存，还是保存下来吧，通过extent和origin会自动计算
+    sizes: originalSizes,
+    tileSize: tileGrid.getTileSize(0) as any,
+    //todo 验证是否真的获取到
+    tileSizes: tileGrid['tileSizes_']
+  }
+  return res;
+}
 
 /**
  * 将完整函数声明字符串转为可调用函数，并注入注册表函数

@@ -2,10 +2,12 @@ export type ISerializedSource =
   | IXYZSource
   | ITileWMS
   | IWMTS
+  | IZoomify
   | ITileJSON
   | ITileArcGISRest
   | IOGCMapTile
   | IVectorTile
+  | IOGCVectorTile
   | IOSMSource
   | IImageArcGISRest
   | IImageStatic
@@ -97,6 +99,25 @@ export interface IWMTS extends ISource {
   transition?: number | null;
   zDirection?: number | null;
 }
+export interface IZoomify extends ISource {
+  type: 'Zoomify';
+  attributions?: string[] | string | null;
+  cacheSize?: number | null;
+  crossOrigin?: string | null;
+  interpolate?: boolean | null;
+  projection?: string | null;
+  tilePixelRatio?: number | null;
+  reprojectionErrorThreshold?: number | null;
+  url?: string;
+  //todo
+  tierSizeCalculation?: 'default' | 'truncate',
+  size?: [number, number] | null;
+  extent?: [number, number, number, number] | null;
+  transition?: number | null;
+  tileSize?: [number, number] | null;
+  zDirection?: number | null;
+}
+
 export interface ITileJSON extends ISource {
   type: 'TileJSON';
   attributions?: string[] | string | null;
@@ -171,6 +192,23 @@ export interface IVectorTile extends ISource {
   urls?: string[] | null;
   wrapX?: boolean | null;
   zDirection?: number | null;
+}
+export interface IOGCVectorTile extends ISource {
+  type: 'OGCVectorTile';
+  url?: string;
+  context?: string | null,
+  format?: string | null;
+  mediaType?:string|null;
+  attributions?: string[] | string | null;
+  attributionsCollapsible?: boolean | null;
+  cacheSize?: number | null;
+  overlaps?: boolean | null;
+  projection?: string | null;
+  tileClass?: string | null;
+  transition?: number | null;
+  wrapX?: boolean | null;
+  zDirection?: number | null;
+  collections?: string[] | null;
 }
 export interface IGeoTIFF extends ISource {
   type: "GeoTIFF";
@@ -248,6 +286,7 @@ export interface IVectorSource extends ISource {
   wrapX?: boolean | null;
 }
 
+
 export interface ICluster extends ISource {
   type: 'Cluster';
   attributions?: string[] | string | null;
@@ -268,7 +307,7 @@ export interface ITileGrid {
   origins?: [number, number][] | null;
   resolutions?: number[] | null;
   sizes?: [number, number][] | null;
-  tileSize?: [number, number] | null;
+  tileSize?: number | [number, number] | null;
   tileSizes?: [number, number][] | null;
 }
 export interface IWMTSTileGrid extends ITileGrid {
