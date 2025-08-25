@@ -124,7 +124,7 @@ export interface ITileJSON extends ISource {
   cacheSize?: number | null;
   crossOrigin?: string | null;
   interpolate?: boolean | null;
-  jsonp?: string | null;
+  jsonp?: boolean | null;
   reprojectionErrorThreshold?: number | null;
   tileJson?: Record<string, any> | null;
   tileLoadFunction?: string; // ((url: string, image: HTMLImageElement) => void)

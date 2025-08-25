@@ -26,7 +26,7 @@ import { deserializeFunction, serializeFunction } from './utils';
 import TileGrid from 'ol/tilegrid/TileGrid.js';
 import type { AttributionLike } from 'ol/source/Source';
 import type { Extent } from 'ol/extent';
-import type { Size } from 'ol/size';
+import { toSize, type Size } from 'ol/size';
 import { all, bbox, tile } from 'ol/loadingstrategy'
 import type { TileCoord } from 'ol/tilecoord';
 import type { Projection } from 'ol/proj';
@@ -398,11 +398,11 @@ export function serializeSource(source: Source): ISerializedSource {
       //todo
       url: source.get('url'),
       //todo 暂时无法获取
-      context:source.get('context'),
+      context: source.get('context'),
       format: serializeFormat(source['format_']),
       //todo 无法获取
-      mediaType:source.get('mediaType'),
-    
+      mediaType: source.get('mediaType'),
+
       attributions: (source.getAttributions() as any),
       attributionsCollapsible: source.getAttributionsCollapsible() ?? true,
       cacheSize: null,
@@ -414,8 +414,8 @@ export function serializeSource(source: Source): ISerializedSource {
       wrapX: source.getWrapX() ?? true,
       zDirection: (source.zDirection as any) ?? 0,
       //todo 暂时无法获取
-      collections:source.get('collections')
-     
+      collections: source.get('collections')
+
     };
   }
   throw new Error('Unsupported source type');
@@ -466,34 +466,34 @@ export function deserializeSource(data: ISerializedSource): any {
         transition: xyzSourceDto.transition ?? 250,
         zDirection: xyzSourceDto.zDirection ?? 0
       });
-    case  'TileArcGISRest':
-        let tileArcGISRestSourceDto = data as ITileArcGISRest
-        return new TileArcGISRest({
-          attributions:tileArcGISRestSourceDto.attributions as AttributionLike,
-          cacheSize:tileArcGISRestSourceDto.cacheSize??undefined,
-          crossOrigin:tileArcGISRestSourceDto.crossOrigin,
-          interpolate:tileArcGISRestSourceDto.interpolate??true,
-          params:tileArcGISRestSourceDto.params as any,
-          hidpi:tileArcGISRestSourceDto.hidpi??true,
-          tileGrid:tileArcGISRestSourceDto.tileGrid?new TileGrid({
-            extent: (tileArcGISRestSourceDto.tileGrid.extent as Extent),
-            minZoom: tileArcGISRestSourceDto.tileGrid.minZoom ?? 0,
-            origin: tileArcGISRestSourceDto.tileGrid.origin ?? undefined,
-            origins: tileArcGISRestSourceDto.tileGrid.origins ?? undefined,
-            resolutions: tileArcGISRestSourceDto.tileGrid.resolutions ?? [],
-            sizes: tileArcGISRestSourceDto.tileGrid.sizes as Size[],
-            tileSize: tileArcGISRestSourceDto.tileGrid.tileSize ?? undefined,
-            tileSizes: tileArcGISRestSourceDto.tileGrid.tileSizes ?? undefined
-          }):undefined,
-          projection:tileArcGISRestSourceDto.projection as any,
-          reprojectionErrorThreshold:tileArcGISRestSourceDto.reprojectionErrorThreshold??0.5,
-          tileLoadFunction:tileArcGISRestSourceDto.tileLoadFunction ? injectFunction(tileArcGISRestSourceDto.tileLoadFunction) : undefined,
-          url:tileArcGISRestSourceDto.url,
-          wrapX:tileArcGISRestSourceDto.wrapX??true,
-          transition:tileArcGISRestSourceDto.transition??undefined,
-          urls:tileArcGISRestSourceDto.urls??undefined,
-          zDirection:tileArcGISRestSourceDto.zDirection??0
-        })
+    case 'TileArcGISRest':
+      let tileArcGISRestSourceDto = data as ITileArcGISRest
+      return new TileArcGISRest({
+        attributions: tileArcGISRestSourceDto.attributions as AttributionLike,
+        cacheSize: tileArcGISRestSourceDto.cacheSize ?? undefined,
+        crossOrigin: tileArcGISRestSourceDto.crossOrigin,
+        interpolate: tileArcGISRestSourceDto.interpolate ?? true,
+        params: tileArcGISRestSourceDto.params as any,
+        hidpi: tileArcGISRestSourceDto.hidpi ?? true,
+        tileGrid: tileArcGISRestSourceDto.tileGrid ? new TileGrid({
+          extent: (tileArcGISRestSourceDto.tileGrid.extent as Extent),
+          minZoom: tileArcGISRestSourceDto.tileGrid.minZoom ?? 0,
+          origin: tileArcGISRestSourceDto.tileGrid.origin ?? undefined,
+          origins: tileArcGISRestSourceDto.tileGrid.origins ?? undefined,
+          resolutions: tileArcGISRestSourceDto.tileGrid.resolutions ?? [],
+          sizes: tileArcGISRestSourceDto.tileGrid.sizes as Size[],
+          tileSize: tileArcGISRestSourceDto.tileGrid.tileSize ?? undefined,
+          tileSizes: tileArcGISRestSourceDto.tileGrid.tileSizes ?? undefined
+        }) : undefined,
+        projection: tileArcGISRestSourceDto.projection as any,
+        reprojectionErrorThreshold: tileArcGISRestSourceDto.reprojectionErrorThreshold ?? 0.5,
+        tileLoadFunction: tileArcGISRestSourceDto.tileLoadFunction ? injectFunction(tileArcGISRestSourceDto.tileLoadFunction) : undefined,
+        url: tileArcGISRestSourceDto.url,
+        wrapX: tileArcGISRestSourceDto.wrapX ?? true,
+        transition: tileArcGISRestSourceDto.transition ?? undefined,
+        urls: tileArcGISRestSourceDto.urls ?? undefined,
+        zDirection: tileArcGISRestSourceDto.zDirection ?? 0
+      })
     case 'GeoTIFF':
       let geoTIFFSourceDto = data as IGeoTIFF
       let geoTIFFSource = new GeoTIFF({
@@ -536,6 +536,22 @@ export function deserializeSource(data: ISerializedSource): any {
         wrapX: oGCMapTileSourceDto.wrapX ?? true,
         transition: oGCMapTileSourceDto.transition ?? undefined,
         collections: oGCMapTileSourceDto.collections ?? undefined
+      })
+    case 'TileJSON':
+      let tileJSONSourceDto = data as ITileJSON;
+      return new TileJSON({
+        attributions: tileJSONSourceDto.attributions as AttributionLike,
+        cacheSize: undefined,
+        crossOrigin: tileJSONSourceDto.crossOrigin,
+        interpolate: tileJSONSourceDto.interpolate ?? true,
+        jsonp: tileJSONSourceDto.jsonp ?? false,
+        reprojectionErrorThreshold: tileJSONSourceDto.reprojectionErrorThreshold ?? 0.5,
+        tileJSON: tileJSONSourceDto.tileJson as any,
+        tileLoadFunction: tileJSONSourceDto.tileLoadFunction ? injectFunction(tileJSONSourceDto.tileLoadFunction) : undefined,
+        tileSize: (tileJSONSourceDto.tileSize as Size) ?? [256, 256],
+        url: tileJSONSourceDto.url ?? undefined,
+        wrapX: tileJSONSourceDto.wrapX ?? true,
+        zDirection: tileJSONSourceDto.zDirection ?? 0
       })
     case 'ImageStatic':
       return new ImageStatic({
@@ -644,8 +660,20 @@ function serializeTileGrid(tileGrid: TileGrid): ITileGrid {
   return res;
 }
 function serializeWMTTileGrid(tileGrid: WMTSTileGrid): IWMTSTileGrid {
+  const extent = tileGrid.getExtent(); // 可能为 null
+
+  // 如果没有 extent，可以用 origin + resolutions + tileSizes 生成临时 extent
+  const ts = toSize(tileGrid.getTileSize(0));
+  const origin = tileGrid.getOrigin(0);
+
+  const fallbackExtent: [number, number, number, number] = [
+    origin[0],
+    origin[1] - ts[1] * tileGrid.getResolutions().length,
+    origin[0] + ts[0] * tileGrid.getResolutions().length,
+    origin[1]
+  ];
   let originalSizes = calculateOriginalSizes(
-    tileGrid?.getExtent()!,
+    extent ?? fallbackExtent,
     tileGrid?.getResolutions()!,
     (tileGrid as any).tileSizes_ || [(tileGrid as any).tileSize_] // 从实例取 tileSizes
   );
