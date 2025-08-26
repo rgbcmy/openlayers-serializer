@@ -432,17 +432,19 @@ function testZoomifySource() {
         crossOrigin: 'anonymous',
         zDirection: -1, // Ensure we get a tile with the screen resolution or higher
     });
+    source.set('url', zoomifyUrl);
+    debugger;
     const extent = source.getTileGrid()?.getExtent();
 
-    const retinaPixelRatio = 2;
-    const retinaSource = new Zoomify({
-        url: zoomifyUrl,
-        size: [imgWidth, imgHeight],
-        crossOrigin: 'anonymous',
-        zDirection: -1, // Ensure we get a tile with the screen resolution or higher
-        tilePixelRatio: retinaPixelRatio, // Display retina tiles
-        tileSize: 256 / retinaPixelRatio, // from a higher zoom level
-    });
+    // const retinaPixelRatio = 2;
+    // const retinaSource = new Zoomify({
+    //     url: zoomifyUrl,
+    //     size: [imgWidth, imgHeight],
+    //     crossOrigin: 'anonymous',
+    //     zDirection: -1, // Ensure we get a tile with the screen resolution or higher
+    //     tilePixelRatio: retinaPixelRatio, // Display retina tiles
+    //     tileSize: 256 / retinaPixelRatio, // from a higher zoom level
+    // });
 
     const layer = new TileLayer({
         source: source
@@ -466,30 +468,55 @@ function testGeoTIFFSource() {
         map.setTarget(undefined);
     }
     const source = new GeoTIFF({
+        normalize: false,
         sources: [
             {
-                url: 'https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/36/Q/WD/2020/7/S2A_36QWD_20200701_0_L2A/TCI.tif',
+                url: 'https://s2downloads.eox.at/demo/EOxCloudless/2020/rgbnir/s2cloudless2020-16bits_sinlge-file_z0-4.tif'
+                //url: 'https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/36/Q/WD/2020/7/S2A_36QWD_20200701_0_L2A/TCI.tif',
             },
         ],
+        wrapX: true,
     });
     let layer = new WebGLTileLayer({
+        style: {
+            color: [
+                'array',
+                ['/', ['band', 0], 2550], // 红色波段归一化
+                ['/', ['band', 1], 2550], // 绿色波段归一化
+                ['/', ['band', 2], 2550], // 蓝色波段归一化
+                1,                        // alpha
+            ],
+        },
         source: source
     })
+
     map = new Map({
         target: 'mapContainer',
-        view: source.getView(),
+        view: new View({
+            center: [0, 0],
+            zoom: 2,
+        }),
         controls: [],
         layers: [layer]
     });
+    // setTimeout(() => {
+    //     debugger
+    //     map.getView().fit(layer.getExtent() as any, {
+    //         //padding: [20, 20, 20, 20], // 可选，留一些边距
+    //         duration: 500,             // 可选，动画时长
+    //     });
+    // }, 5000);
 }
 function testOGCMapTileSource() {
     if (map) {
         map.setTarget(undefined);
     }
+    let source = new OGCMapTile({
+        url: 'https://maps.gnosis.earth/ogcapi/collections/blueMarble/map/tiles/WebMercatorQuad',
+    });
+    source.set('url', 'https://maps.gnosis.earth/ogcapi/collections/blueMarble/map/tiles/WebMercatorQuad');
     let layer = new TileLayer({
-        source: new OGCMapTile({
-            url: 'https://maps.gnosis.earth/ogcapi/collections/blueMarble/map/tiles/WebMercatorQuad',
-        })
+        source: source
     })
     map = new Map({
         target: 'mapContainer',
@@ -500,6 +527,7 @@ function testOGCMapTileSource() {
         controls: [],
         layers: [layer]
     });
+
 }
 function testImageWMSSource() {
     if (map) {

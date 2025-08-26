@@ -15,7 +15,8 @@ export type ISerializedSource =
   | IGeoTIFF
   | IUTFGrid
   | IVectorSource
-  | ICluster;
+  | ICluster
+  | IDataTile
 
 export interface ISource {
   type: string;
@@ -198,7 +199,7 @@ export interface IOGCVectorTile extends ISource {
   url?: string;
   context?: string | null,
   format?: string | null;
-  mediaType?:string|null;
+  mediaType?: string | null;
   attributions?: string[] | string | null;
   attributionsCollapsible?: boolean | null;
   cacheSize?: number | null;
@@ -217,7 +218,7 @@ export interface IGeoTIFF extends ISource {
   convertToRGB?: boolean | 'auto';
   normalize: boolean;
   opaque: boolean;
-  projection: string;
+  projection?: string|null;
   transition: number;
   wrapX: boolean;
   interpolate: boolean
@@ -341,7 +342,10 @@ export interface IGeoTIFFSourceOptions {
   blockSize: number,
   cacheSize: number
 }
-
+//todo
+export interface IDataTile {
+  type: 'DataTile';
+}
 export interface IConfig {
   /** The name. */
   name?: string;
@@ -381,4 +385,14 @@ export interface IConfig {
 
   /** Optional center. */
   center?: number[];
+}
+
+export interface IStyle {
+  variables?: Record<string, string | number> | null;
+  color: any[] | string | number | boolean | undefined;
+  brightness: any[] | string | number | boolean;
+  contrast: any[] | string | number | boolean;
+  exposure: any[] | string | number | boolean;
+  saturation: any[] | string | number | boolean;
+  gamma: any[] | string | number | boolean;
 }

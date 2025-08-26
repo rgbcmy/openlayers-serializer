@@ -1,22 +1,24 @@
 import Map from "ol/Map";
 import type BaseLayer from "ol/layer/Base";
-import type { IBaseLayer, IGroupLayer, IImageLayer, ISerializedLayer, ITileLayer, IVectorLayer, IVectorTileLayer } from "../dto";
+import type { IBaseLayer, IGroupLayer, IImageLayer, ISerializedLayer, ITileLayer, IVectorLayer, IVectorTileLayer, IWebGLTileLayer } from "../dto";
 import LayerGroup from "ol/layer/Group";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
 import { deserializeLayerStyle, deserializeStyle, serializeLayerStyle, serializeStyle } from "./style";
 import { deserializeSource, serializeSource } from "./source";
-import type { IVectorSource } from "../dto/source";
+import type { IVectorSource, IVectorTile } from "../dto/source";
 import ImageLayer from "ol/layer/Image";
 import WebGLTileLayer from 'ol/layer/WebGLTile';
 import VectorTileLayer from "ol/layer/VectorTile";
 import type { StyleLike } from "ol/style/Style";
+import { MVT } from "ol/format";
+import { VectorTile } from "ol/source";
 
 
 export function serializeLayer(layer: BaseLayer): IBaseLayer {
     const layerDto: IBaseLayer = {
         type: "",
-        id: layer.get('id') ||crypto.randomUUID(),
+        id: layer.get('id') || crypto.randomUUID(),
         name: layer.get('name') || 'Untitled',
         className: layer.getClassName() ?? "ol-layer",
         opacity: layer.getOpacity() ?? 1,
@@ -61,10 +63,37 @@ export function serializeLayer(layer: BaseLayer): IBaseLayer {
             layerDto.type = 'Image';
             let sourceDto = serializeSource(layer.getSource() as any);
             (layerDto as IImageLayer).source = sourceDto as any;
-        }else if(layer instanceof WebGLTileLayer){
+        } else if (layer instanceof WebGLTileLayer) {
             //todo
             layerDto.type = 'WebGLTile';
-            
+            (layerDto as IWebGLTileLayer).style = layer['style_'];
+            (layerDto as IWebGLTileLayer).preload = layer.getPreload() ?? 0,
+                (layerDto as IWebGLTileLayer).source = serializeSource(layer.getSource() as any) as any;
+            //todo sources好像还可以是function
+            (layerDto as IWebGLTileLayer).sources = layer['sources_'];
+            (layerDto as IWebGLTileLayer).useInterimTilesOnError = layer.getUseInterimTilesOnError() ?? true;
+            (layerDto as IWebGLTileLayer).cacheSize = null
+
+        } else if (layer instanceof VectorTileLayer) {
+            layerDto.type = 'VectorTile';
+            let sourceDto = serializeSource(layer.getSource() as any);
+            //todo
+            (layerDto as IVectorTileLayer).renderOrder = undefined;
+            (layerDto as IVectorTileLayer).renderBuffer = layer.getRenderBuffer() ?? 100;
+            (layerDto as IVectorTileLayer).renderMode = (layer.getRenderMode() as any) ?? 'hybrid';
+            debugger
+            (layerDto as IVectorTileLayer).source = sourceDto as IVectorTile;
+            (layerDto as IVectorTileLayer).declutter = layer.getDeclutter() ?? false;
+            //todo
+            let styleDto = serializeLayerStyle(layer.getStyle() as any);
+            (layerDto as IVectorTileLayer).style = styleDto;
+            (layerDto as IVectorTileLayer).updateWhileAnimating = layer.getUpdateWhileAnimating() ?? false;
+            (layerDto as IVectorTileLayer).updateWhileInteracting = layer.getUpdateWhileInteracting() ?? false;
+            (layerDto as IVectorTileLayer).preload = layer.getPreload() ?? 0;
+            (layerDto as IVectorTileLayer).useInterimTilesOnError = layer.getUseInterimTilesOnError() ?? true;
+        } else {
+            throw new Error(`Unsupported layer type: ${layer.constructor.name}`);
+
         }
 
         //todo other layer
@@ -143,12 +172,14 @@ export function deserializeLayer(layerDto: IBaseLayer): BaseLayer {
             properties: layerDto.properties || {},
 
         });
-    }else if(layerDto.type === 'VectorTile'){
+    } else if (layerDto.type === 'VectorTile') {
         //todo
-         let source = (layerDto as IVectorTileLayer).source ? deserializeSource((layerDto as IVectorTileLayer).source) : undefined
-
+        let source = (layerDto as IVectorTileLayer).source ? deserializeSource((layerDto as IVectorTileLayer).source as any) : undefined
+        debugger
+        console.log((layerDto as IVectorTileLayer).style);
+        let style =(deserializeLayerStyle((layerDto as IVectorTileLayer).style) as any)??undefined;
         layer = new VectorTileLayer({
-             className: layerDto.className ?? 'ol-layer',
+            className: layerDto.className ?? 'ol-layer',
             opacity: layerDto.opacity ?? 1,
             visible: layerDto.visible ?? true,
             extent: layerDto.extent ?? undefined,
@@ -157,26 +188,50 @@ export function deserializeLayer(layerDto: IBaseLayer): BaseLayer {
             maxResolution: layerDto.maxResolution ?? undefined,
             minZoom: layerDto.minZoom ?? undefined,
             maxZoom: layerDto.maxZoom ?? undefined,
-            renderOrder: eval(`(${(layerDto as IVectorTileLayer).renderOrder})`) ?? undefined,
+            //todo
+            renderOrder: undefined, //eval(`(${(layerDto as IVectorTileLayer).renderOrder})`) ?? undefined,
             renderBuffer: (layerDto as IVectorTileLayer).renderBuffer ?? 100,
-            renderMode:(layerDto as IVectorTileLayer).renderBuffer as any,
-            source: (layerDto as IVectorTileLayer).source ? deserializeSource((layerDto as IVectorTileLayer).source) : undefined,
-            //todo 需要验证
-            style: deserializeLayerStyle((layerDto as IVectorTileLayer).style) as any,
+            renderMode: (layerDto as IVectorTileLayer).renderMode as any,
+            source: source,
+            //todo 需要验证 
+            style:style,
             declutter: (layerDto as IVectorTileLayer).declutter ?? false,
             background: layerDto.background ?? undefined,
             updateWhileAnimating: (layerDto as IVectorTileLayer).updateWhileAnimating ?? false,
             updateWhileInteracting: (layerDto as IVectorTileLayer).updateWhileInteracting ?? false,
-            useInterimTilesOnError:(layerDto as IVectorTileLayer).useInterimTilesOnError??false,
+            preload: (layerDto as IVectorTileLayer).preload ?? 0,
+            useInterimTilesOnError: (layerDto as IVectorTileLayer).useInterimTilesOnError ?? true,
             properties: layerDto.properties || {},
 
+        });
+    } else if (layerDto.type === 'WebGLTile') {
+        let webGLTileLayerDto = layerDto as IWebGLTileLayer
+        let source = (layerDto as IWebGLTileLayer).source ? deserializeSource((layerDto as IWebGLTileLayer).source) : undefined
+        let sources = (layerDto as IWebGLTileLayer).sources ? (layerDto as IWebGLTileLayer).sources?.map((item) => deserializeSource((item))) : undefined
+        layer = new WebGLTileLayer({
+            style: (webGLTileLayerDto.style as any) ?? undefined,
+            className: webGLTileLayerDto.className ?? 'ol-layer',
+            opacity: layerDto.opacity ?? 1,
+            visible: layerDto.visible ?? true,
+            extent: layerDto.extent ?? undefined,
+            zIndex: layerDto.zIndex ?? undefined,
+            minResolution: layerDto.minResolution ?? undefined,
+            maxResolution: layerDto.maxResolution ?? undefined,
+            minZoom: layerDto.minZoom ?? undefined,
+            maxZoom: layerDto.maxZoom ?? undefined,
+            preload: (layerDto as IWebGLTileLayer).preload ?? 0,
+            source: source,
+            sources: sources,
+            useInterimTilesOnError: (layerDto as IWebGLTileLayer).useInterimTilesOnError ?? true,
+            cacheSize: undefined,
+            properties: layerDto.properties || {},
         });
     }
     else {
         throw new Error(`Unsupported layer type: ${layerDto.type}`);
     }
-    layer.set('id',layerDto.id??crypto.randomUUID());
-    layer.set('name',layerDto.name??"Untitled")
+    layer.set('id', layerDto.id ?? crypto.randomUUID());
+    layer.set('name', layerDto.name ?? "Untitled")
     return layer;
 }
 

@@ -8,7 +8,8 @@ export function serializeView(view: View): ISerializedView {
 
     const serialized: ISerializedView = {
         center: (view.getCenter() as [number, number]) ?? undefined,
-
+        //todo
+        //constrainRotation: 
         //constrainOnlyCenter: view.getConstrainOnlyCenter?.() ?? undefined,
         constrainResolution: view.getConstrainResolution()??false,
         //constrainRotation: view.getConstrainRotation(),

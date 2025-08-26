@@ -8,6 +8,9 @@ import type { ISerializedCircle, ISerializedStyle, ISerializedFill, ISerializedI
 import type { FlatStyle, FlatStyleLike, Rule } from 'ol/style/flat';
 // Add missing FlatStyle import
 import type { FeatureLike } from 'ol/Feature';
+import type { IStyle } from '../dto/source';
+import type { WebGLStyle } from 'ol/style/webgl';
+import type WebGLTileLayer from 'ol/layer/WebGLTile';
 
 
 
@@ -186,7 +189,7 @@ export function serializeLayerStyle(style: StyleLike | FlatStyleLike) {
     return style.map(serializeStyle);
   } else if (isStyleFunction(style)) {
     //return 'StyleFunction';
-    //ToDo: 需要处理 StyleFunction 的序列化
+    //ToDo: 需要处理 StyleFunction 的序列化  直接eval不太合适，特别是vectortile的默认情况
     return eval(`(${(style)})`)
   } else if (isFlatStyle(style)) {
     return style;
@@ -203,6 +206,7 @@ export function serializeLayerStyle(style: StyleLike | FlatStyleLike) {
 
 
 export function deserializeLayerStyle(style: any): StyleLike | FlatStyleLike | null {
+  debugger
   if (!style) return null;
 
   // 单个序列化 Style
@@ -287,3 +291,12 @@ export function detectStyleType(value: any): string {
   if (isRuleArray(value)) return 'Rule[]';
   return 'Unknown';
 }
+
+
+// export function serializeWebGLTileStyle(layer:WebGLTileLayer){
+//   let style =layer['style_']  
+//   return style
+// }
+// export function deserializeWebGLTileStyle(style:IStyle){
+//     return 
+// }

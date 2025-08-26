@@ -1,7 +1,7 @@
 import type { ISerializedStyle } from "./style";
 import Layer from "ol/layer/Layer";
 import TileLayer from "ol/layer/Tile";
-import type { IImageStatic, IOGCMapTile, ITileArcGISRest, ITileJSON, ITileWMS, IVectorSource, IVectorTile, IWMTS, IXYZSource } from "./source";
+import type { IGeoTIFF, IImageStatic, IOGCMapTile, ITileArcGISRest, ITileJSON, ITileWMS, IVectorSource, IVectorTile, IWMTS, IXYZSource,IDataTile, IZoomify, IStyle} from "./source";
 
 
 export interface IBaseLayer {
@@ -31,17 +31,15 @@ export interface IImageLayer extends IBaseLayer {
 
 export interface ITileLayer extends IBaseLayer {
     type: 'Tile';
-    source: IXYZSource | ITileWMS | IWMTS | IOGCMapTile | ITileArcGISRest | ITileJSON | IVectorTile;
+    source: IXYZSource | ITileWMS | IWMTS | IOGCMapTile | ITileArcGISRest | ITileJSON | IVectorTile|IZoomify;
     preload: number | null;
     useInterimTilesOnError: boolean | null;
 }
-export interface IWebGLTile extends IBaseLayer {
+export interface IWebGLTileLayer extends IBaseLayer {
     type: 'WebGLTile';
-    style: ISerializedStyle | null;
-    source: {
-        type: string;
-        url: string | null;
-    };
+    style: IStyle|null,
+    //todo
+    source: IDataTile|IGeoTIFF|IXYZSource | ITileWMS | IWMTS | IOGCMapTile | ITileArcGISRest | ITileJSON|IZoomify;
     sources: any[] | null;
     preload: number | null;
     useInterimTilesOnError: boolean | null;
@@ -71,12 +69,12 @@ export interface IVectorLayer extends IBaseLayer {
 }
 export interface IVectorTileLayer extends IBaseLayer {
     type: 'VectorTile';
-    renderOrder: string | null;
+    renderOrder?: string | null;
     renderBuffer: number | null;
     renderMode: 'vector' | 'hybrid' | null;
     declutter: boolean | string | number | null;
-    source: IVectorTile
-    style: ISerializedStyle | null;
+    source?: IVectorTile|null;
+    style?: ISerializedStyle | null;
     updateWhileAnimating: boolean | null;
     updateWhileInteracting: boolean | null;
     preload: number | null;
@@ -92,7 +90,7 @@ export type ISerializedLayer =
     | ITileLayer
     | IVectorLayer
     | IImageLayer
-    | IWebGLTile
+    | IWebGLTileLayer
     | IHeatmap
     | IVectorTile
     | IGroupLayer
