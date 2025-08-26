@@ -21,7 +21,7 @@ import type {
   IWMTSTileGrid,
   IVectorTile
 } from '../dto/source';
-import { GeoTIFF, ImageArcGISRest, ImageWMS, OGCMapTile, OGCVectorTile, Source, TileArcGISRest, TileJSON, TileWMS, UTFGrid, WMTS, Zoomify, type Tile } from 'ol/source';
+import { GeoTIFF, ImageArcGISRest, ImageWMS, OGCMapTile, OGCVectorTile, Source, TileArcGISRest, TileJSON, TileWMS, UTFGrid, WMTS, Zoomify} from 'ol/source';
 import { deserializeFunction, serializeFunction } from './utils';
 // import type { TileGrid } from 'ol/tilegrid';
 import TileGrid from 'ol/tilegrid/TileGrid.js';
@@ -677,7 +677,6 @@ export function deserializeSource(data: ISerializedSource): any {
         //loader
       });
     case 'VectorTile':
-      debugger
       let vectorTileDto = data as IVectorTile;
       return new VectorTile({
         attributions: vectorTileDto.attributions as AttributionLike,
