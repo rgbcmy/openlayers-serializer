@@ -1,7 +1,7 @@
 import type { ISerializedStyle } from "./style";
 import Layer from "ol/layer/Layer";
 import TileLayer from "ol/layer/Tile";
-import type { IGeoTIFF, IImageStatic, IOGCMapTile, ITileArcGISRest, ITileJSON, ITileWMS, IVectorSource, IVectorTile, IWMTS, IXYZSource,IDataTile, IZoomify, IStyle} from "./source";
+import type { IGeoTIFF, IImageStatic, IOGCMapTile, ITileArcGISRest, ITileJSON, ITileWMS, IVectorSource, IVectorTile, IWMTS, IXYZSource, IDataTile, IZoomify, IStyle, IImageArcGISRest, IImageWMS } from "./source";
 
 
 export interface IBaseLayer {
@@ -25,21 +25,21 @@ export interface IBaseLayer {
 export interface IImageLayer extends IBaseLayer {
     type: 'Image';
     //todo 支持更多source
-    source:IImageStatic
+    source: IImageStatic | IImageArcGISRest | IImageWMS;
 }
 
 
 export interface ITileLayer extends IBaseLayer {
     type: 'Tile';
-    source: IXYZSource | ITileWMS | IWMTS | IOGCMapTile | ITileArcGISRest | ITileJSON | IVectorTile|IZoomify;
+    source: IXYZSource | ITileWMS | IWMTS | IOGCMapTile | ITileArcGISRest | ITileJSON | IVectorTile | IZoomify;
     preload: number | null;
     useInterimTilesOnError: boolean | null;
 }
 export interface IWebGLTileLayer extends IBaseLayer {
     type: 'WebGLTile';
-    style: IStyle|null,
+    style: IStyle | null,
     //todo
-    source: IDataTile|IGeoTIFF|IXYZSource | ITileWMS | IWMTS | IOGCMapTile | ITileArcGISRest | ITileJSON|IZoomify;
+    source: IDataTile | IGeoTIFF | IXYZSource | ITileWMS | IWMTS | IOGCMapTile | ITileArcGISRest | ITileJSON | IZoomify;
     sources: any[] | null;
     preload: number | null;
     useInterimTilesOnError: boolean | null;
@@ -48,14 +48,14 @@ export interface IWebGLTileLayer extends IBaseLayer {
 export interface IHeatmap extends IBaseLayer {
     type: 'Heatmap';
     gradient: string[] | null;
-    radius: number | null;
-    blur: number | null;
-    weight: string | null;
+
+    radius: number | any[] | null;//any[]为表达式树
+    blur: number | any[] | null;//any[]为表达式树
+    weight: string | null;//string或者function
+    filter?: boolean | any[] | null;//any[]为表达式树
+    variables?: string[] | null;
     declutter: boolean | string | number | null;
-    source: {
-        type: 'GeoJSON';
-        features: any[];
-    };
+    source: IVectorSource
 }
 export interface IVectorLayer extends IBaseLayer {
     type: 'Vector';
@@ -73,7 +73,7 @@ export interface IVectorTileLayer extends IBaseLayer {
     renderBuffer: number | null;
     renderMode: 'vector' | 'hybrid' | null;
     declutter: boolean | string | number | null;
-    source?: IVectorTile|null;
+    source?: IVectorTile | null;
     style?: ISerializedStyle | null;
     updateWhileAnimating: boolean | null;
     updateWhileInteracting: boolean | null;

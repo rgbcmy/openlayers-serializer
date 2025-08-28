@@ -13,6 +13,7 @@ import VectorTileLayer from "ol/layer/VectorTile";
 import type { StyleLike } from "ol/style/Style";
 import { MVT } from "ol/format";
 import { VectorTile } from "ol/source";
+import HeatmapLayer from "ol/layer/Heatmap";
 
 
 export function serializeLayer(layer: BaseLayer): IBaseLayer {
@@ -226,6 +227,11 @@ export function deserializeLayer(layerDto: IBaseLayer): BaseLayer {
             cacheSize: undefined,
             properties: layerDto.properties || {},
         });
+    }else if (layerDto.type === 'Heatmap') {
+        //todo
+        layer=new HeatmapLayer({
+
+        })
     }
     else {
         throw new Error(`Unsupported layer type: ${layerDto.type}`);

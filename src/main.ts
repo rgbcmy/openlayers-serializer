@@ -1,11 +1,12 @@
 import { Map, Tile, View } from "ol";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
+import HeatmapLayer from "ol/layer/Heatmap";
 import 'ol/ol.css';
 import { fromLonLat, Projection } from "ol/proj";
 import { XYZ, Vector, VectorTile as VectorTileSource, BingMaps, TileArcGISRest, ImageArcGISRest, TileJSON, WMTS, TileWMS, Zoomify, GeoTIFF, OGCMapTile, ImageWMS } from "ol/source";
 import { quadKey } from "ol/source/BingMaps";
-import { GeoJSON, WKT, WKB, MVT } from "ol/format";
+import { GeoJSON, WKT, WKB, MVT, KML } from "ol/format";
 import type { TileCoord } from "ol/tilecoord";
 import { deserializeMap, serializeMap } from "./serializer";
 import { mapDto } from "./testData";
@@ -17,6 +18,7 @@ import { get as getProjection } from 'ol/proj';
 import WMTSTileGrid from "ol/tilegrid/WMTS";
 import WebGLTileLayer from 'ol/layer/WebGLTile.js';
 import VectorTileLayer from "ol/layer/VectorTile";
+import VectorSource from "ol/source/Vector";
 let map: Map;
 //initMap();
 //deInitMap();
@@ -331,7 +333,6 @@ function testTileJSONSource() {
     if (map) {
         map.setTarget(undefined);
     }
-    //todo
     let layer = new TileLayer({
         source: new TileJSON({
             url: 'https://maps.gnosis.earth/ogcapi/collections/NaturalEarth:raster:HYP_HR_SR_OB_DR/map/tiles/WebMercatorQuad?f=tilejson',
@@ -572,6 +573,39 @@ function testVectorTileSource() {
         layers: [layer]
     });
 }
+function testHeatMap() {
+    if (map) {
+        map.setTarget(undefined);
+    }
+    const heatmapLayer = new HeatmapLayer({
+        source: new VectorSource({
+            url: 'https://openlayers.org/en/v9.2.4/examples/data/kml/2012_Earthquakes_Mag5.kml',
+            format: new KML({
+                extractStyles: false,
+            }),
+        }),
+        blur: 10,
+        radius: 20,
+        weight: function (feature) {
+            // 2012_Earthquakes_Mag5.kml stores the magnitude of each earthquake in a
+            // standards-violating <magnitude> tag in each Placemark.  We extract it from
+            // the Placemark's name instead.
+            const name = feature.get('name');
+            const magnitude = parseFloat(name.substr(2));
+            return magnitude - 5;
+        },
+    });
+
+    map = new Map({
+        target: 'mapContainer',
+        view: new View({
+            center: [0, 0],
+            zoom: 2
+        }),
+        controls: [],
+        layers: [heatmapLayer]
+    });
+}
 // 挂到 window 全局
 (window as any).exportMap = exportMap;
 (window as any).importMap = importMap;
@@ -588,3 +622,4 @@ function testVectorTileSource() {
 (window as any).testOGCMapTileSource = testOGCMapTileSource;
 (window as any).testImageWMSSource = testImageWMSSource;
 (window as any).testVectorTileSource = testVectorTileSource;
+(window as any).testHeatMap = testHeatMap;
