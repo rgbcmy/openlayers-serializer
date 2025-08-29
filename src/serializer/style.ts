@@ -11,8 +11,8 @@ import type { FeatureLike } from 'ol/Feature';
 import type { IStyle } from '../dto/source';
 import type { WebGLStyle } from 'ol/style/webgl';
 import type WebGLTileLayer from 'ol/layer/WebGLTile';
-import { injectFunction } from './source';
 import { isFunctionString } from './layer';
+import { injectFunction } from '../common/registry';
 
 
 

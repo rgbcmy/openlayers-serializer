@@ -33,13 +33,13 @@ import { all, bbox, tile } from 'ol/loadingstrategy'
 import type { TileCoord } from 'ol/tilecoord';
 import type { Projection } from 'ol/proj';
 import { quadKey } from "ol/source/BingMaps";
-import { registerFunction, registry } from '../common/registry';
+import { injectFunction, registerItem, registry } from '../common/registry';
 import type { ServerType } from 'ol/source/wms';
 import type { SourceInfo } from 'ol/source/GeoTIFF';
 import WMTSTileGrid from 'ol/tilegrid/WMTS';
 import type { RequestEncoding } from 'ol/source/WMTS';
 //注册全局函数
-registerFunction('quadKey', quadKey);
+registerItem('quadKey', quadKey);
 //矢量数据源加载策略
 
 
@@ -868,22 +868,7 @@ function serializeWMTTileGrid(tileGrid: WMTSTileGrid): IWMTSTileGrid {
   return res;
 }
 
-/**
- * 将完整函数声明字符串转为可调用函数，并注入注册表函数
- * @param functionCode 完整函数声明字符串，例如：
- * "function(a, b) { return a + b + helper(a); }"
- */
-export function injectFunction(functionCode: string) {
-  const injectedArgs = Object.keys(registry).join(',');
-  const wrapper = `
-    (function(${injectedArgs}) {
-      return ${functionCode};
-    })
-  `;
 
-  const fnFactory = eval(wrapper);
-  return fnFactory(...Object.values(registry));
-}
 
 
 type BuiltInStrategyName = 'all' | 'bbox' | 'tile';

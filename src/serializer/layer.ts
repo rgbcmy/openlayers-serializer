@@ -5,7 +5,7 @@ import LayerGroup from "ol/layer/Group";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
 import { deserializeLayerStyle, deserializeStyle, serializeLayerStyle, serializeStyle } from "./style";
-import { deserializeSource, injectFunction, serializeSource } from "./source";
+import { deserializeSource, serializeSource } from "./source";
 import type { IVectorSource, IVectorTile } from "../dto/source";
 import ImageLayer from "ol/layer/Image";
 import WebGLTileLayer from 'ol/layer/WebGLTile';
@@ -21,6 +21,15 @@ import Fill from "ol/style/Fill";
 import TextStyle from "ol/style/Text";
 import type { FeatureLike } from "ol/Feature";
 import type { FlatStyleLike } from "ol/style/flat";
+import { injectFunction, registerItem } from "../common/registry";
+registerItem('Style', Style);
+registerItem('CircleStyle', CircleStyle);
+registerItem('Stroke', Stroke);
+registerItem('Fill', Fill);
+registerItem('TextStyle', TextStyle);
+
+const styleCache: Record<string, any> = {};
+registerItem('styleCache', styleCache);
 
 
 export function serializeLayer(layer: BaseLayer): IBaseLayer {
@@ -157,6 +166,7 @@ export function deserializeLayer(layerDto: IBaseLayer): BaseLayer {
         });
     } else if (layerDto.type === 'Vector') {
         const styleCache: Record<string, any> = {};
+        let style=deserializeLayerStyle((layerDto as IVectorLayer).style)
         layer = new VectorLayer({
             className: layerDto.className ?? 'ol-layer',
             opacity: layerDto.opacity ?? 1,
@@ -170,26 +180,27 @@ export function deserializeLayer(layerDto: IBaseLayer): BaseLayer {
             renderOrder: eval(`(${(layerDto as IVectorLayer).renderOrder})`) ?? undefined,
             renderBuffer: (layerDto as IVectorLayer).renderBuffer ?? 100,
             source: (layerDto as IVectorLayer).source ? deserializeSource((layerDto as IVectorLayer).source) : undefined,
-            style: function (feature: FeatureLike) {
+            style: style,
+            // function (feature: FeatureLike) {
                 
-                const size = feature.get('features').length;
-                let style: StyleLike | FlatStyleLike | undefined = styleCache[size];
-                if (!style) {
-                    style = new Style({
-                        image: new CircleStyle({
-                            radius: 15,
-                            stroke: new Stroke({ color: '#fff' }),
-                            fill: new Fill({ color: size > 1 ? '#3399CC' : '#66CC66' })
-                        }),
-                        text: new TextStyle({
-                            text: size.toString(),
-                            fill: new Fill({ color: '#fff' })
-                        })
-                    });
-                    styleCache[size] = style;
-                }
-                return style as any;
-            },// deserializeLayerStyle((layerDto as IVectorLayer).style),
+            //     const size = feature.get('features').length;
+            //     let style: StyleLike | FlatStyleLike | undefined = styleCache[size];
+            //     if (!style) {
+            //         style = new Style({
+            //             image: new CircleStyle({
+            //                 radius: 15,
+            //                 stroke: new Stroke({ color: '#fff' }),
+            //                 fill: new Fill({ color: size > 1 ? '#3399CC' : '#66CC66' })
+            //             }),
+            //             text: new TextStyle({
+            //                 text: size.toString(),
+            //                 fill: new Fill({ color: '#fff' })
+            //             })
+            //         });
+            //         styleCache[size] = style;
+            //     }
+            //     return style as any;
+            // },// deserializeLayerStyle((layerDto as IVectorLayer).style),
             declutter: (layerDto as IVectorLayer).declutter ?? false,
             background: layerDto.background ?? undefined,
             updateWhileAnimating: (layerDto as IVectorLayer).updateWhileAnimating ?? false,
