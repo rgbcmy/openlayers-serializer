@@ -11,6 +11,8 @@ import type { FeatureLike } from 'ol/Feature';
 import type { IStyle } from '../dto/source';
 import type { WebGLStyle } from 'ol/style/webgl';
 import type WebGLTileLayer from 'ol/layer/WebGLTile';
+import { injectFunction } from './source';
+import { isFunctionString } from './layer';
 
 
 
@@ -190,7 +192,8 @@ export function serializeLayerStyle(style: StyleLike | FlatStyleLike) {
   } else if (isStyleFunction(style)) {
     //return 'StyleFunction';
     //ToDo: 需要处理 StyleFunction 的序列化  直接eval不太合适，特别是vectortile的默认情况
-    return eval(`(${(style)})`)
+
+    return style.toString();
   } else if (isFlatStyle(style)) {
     return style;
   }
@@ -206,7 +209,7 @@ export function serializeLayerStyle(style: StyleLike | FlatStyleLike) {
 
 
 export function deserializeLayerStyle(style: any): StyleLike | FlatStyleLike | null {
-  debugger
+  
   if (!style) return null;
 
   // 单个序列化 Style
@@ -219,12 +222,12 @@ export function deserializeLayerStyle(style: any): StyleLike | FlatStyleLike | n
     return style.map(deserializeStyle).filter(isValid);
   }
 
-  // StyleFunction 字符串
-  if (typeof style === 'string' && style.startsWith('function')) {
+  // StyleFunction 字符串 //todo这个判断需要重新考虑
+  if (isFunctionString(style)) {
     try {
       // eslint-disable-next-line no-eval
-      const fn: StyleFunction = eval(`(${style})`);
-      if (typeof fn === 'function') return fn;
+      const fn: StyleFunction = injectFunction(style);
+      return fn;
     } catch (err) {
       console.error('Failed to eval StyleFunction:', err);
       return null;

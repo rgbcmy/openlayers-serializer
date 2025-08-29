@@ -49,12 +49,9 @@ export interface IHeatmap extends IBaseLayer {
     type: 'Heatmap';
     gradient: string[] | null;
 
-    radius: number | any[] | null;//any[]为表达式树
-    blur: number | any[] | null;//any[]为表达式树
+    radius: number | null;//any[]为表达式树
+    blur: number  | null;//any[]为表达式树
     weight: string | null;//string或者function
-    filter?: boolean | any[] | null;//any[]为表达式树
-    variables?: string[] | null;
-    declutter: boolean | string | number | null;
     source: IVectorSource
 }
 export interface IVectorLayer extends IBaseLayer {

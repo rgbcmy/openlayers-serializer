@@ -1,11 +1,11 @@
 import Map from "ol/Map";
 import type BaseLayer from "ol/layer/Base";
-import type { IBaseLayer, IGroupLayer, IImageLayer, ISerializedLayer, ITileLayer, IVectorLayer, IVectorTileLayer, IWebGLTileLayer } from "../dto";
+import type { IBaseLayer, IGroupLayer, IHeatmap, IImageLayer, ISerializedLayer, ITileLayer, IVectorLayer, IVectorTileLayer, IWebGLTileLayer } from "../dto";
 import LayerGroup from "ol/layer/Group";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
 import { deserializeLayerStyle, deserializeStyle, serializeLayerStyle, serializeStyle } from "./style";
-import { deserializeSource, serializeSource } from "./source";
+import { deserializeSource, injectFunction, serializeSource } from "./source";
 import type { IVectorSource, IVectorTile } from "../dto/source";
 import ImageLayer from "ol/layer/Image";
 import WebGLTileLayer from 'ol/layer/WebGLTile';
@@ -14,6 +14,13 @@ import type { StyleLike } from "ol/style/Style";
 import { MVT } from "ol/format";
 import { VectorTile } from "ol/source";
 import HeatmapLayer from "ol/layer/Heatmap";
+import Style from "ol/style/Style";
+import CircleStyle from "ol/style/Circle";
+import Stroke from "ol/style/Stroke";
+import Fill from "ol/style/Fill";
+import TextStyle from "ol/style/Text";
+import type { FeatureLike } from "ol/Feature";
+import type { FlatStyleLike } from "ol/style/flat";
 
 
 export function serializeLayer(layer: BaseLayer): IBaseLayer {
@@ -82,17 +89,30 @@ export function serializeLayer(layer: BaseLayer): IBaseLayer {
             (layerDto as IVectorTileLayer).renderOrder = undefined;
             (layerDto as IVectorTileLayer).renderBuffer = layer.getRenderBuffer() ?? 100;
             (layerDto as IVectorTileLayer).renderMode = (layer.getRenderMode() as any) ?? 'hybrid';
-            debugger
+            
             (layerDto as IVectorTileLayer).source = sourceDto as IVectorTile;
             (layerDto as IVectorTileLayer).declutter = layer.getDeclutter() ?? false;
             //todo
             let styleDto = serializeLayerStyle(layer.getStyle() as any);
-            (layerDto as IVectorTileLayer).style = styleDto;
+            (layerDto as IVectorTileLayer).style = styleDto as any;
             (layerDto as IVectorTileLayer).updateWhileAnimating = layer.getUpdateWhileAnimating() ?? false;
             (layerDto as IVectorTileLayer).updateWhileInteracting = layer.getUpdateWhileInteracting() ?? false;
             (layerDto as IVectorTileLayer).preload = layer.getPreload() ?? 0;
             (layerDto as IVectorTileLayer).useInterimTilesOnError = layer.getUseInterimTilesOnError() ?? true;
-        } else {
+        } else if (layer instanceof HeatmapLayer) {
+            layerDto.type = 'Heatmap';
+            let sourceDto = serializeSource(layer.getSource() as any);
+            (layerDto as IHeatmap).gradient = layer.getGradient() ?? ['#00f', '#0ff', '#0f0', '#ff0', '#f00'];
+            (layerDto as IHeatmap).gradient = layer.getGradient() ?? 8;
+            (layerDto as IHeatmap).radius = layer.getRadius() ?? 8;
+            (layerDto as IHeatmap).blur = layer.getBlur() ?? 15;
+            (layerDto as IHeatmap).radius = layer.getRadius() ?? 8;
+            //todo openlayers没有存储weight
+            (layerDto as IHeatmap).weight = layer.get('weight').toString() ?? 'weight';
+            (layerDto as IHeatmap).source = sourceDto as IVectorSource;
+        }
+
+        else {
             throw new Error(`Unsupported layer type: ${layer.constructor.name}`);
 
         }
@@ -136,6 +156,7 @@ export function deserializeLayer(layerDto: IBaseLayer): BaseLayer {
 
         });
     } else if (layerDto.type === 'Vector') {
+        const styleCache: Record<string, any> = {};
         layer = new VectorLayer({
             className: layerDto.className ?? 'ol-layer',
             opacity: layerDto.opacity ?? 1,
@@ -149,7 +170,26 @@ export function deserializeLayer(layerDto: IBaseLayer): BaseLayer {
             renderOrder: eval(`(${(layerDto as IVectorLayer).renderOrder})`) ?? undefined,
             renderBuffer: (layerDto as IVectorLayer).renderBuffer ?? 100,
             source: (layerDto as IVectorLayer).source ? deserializeSource((layerDto as IVectorLayer).source) : undefined,
-            style: deserializeLayerStyle((layerDto as IVectorLayer).style),
+            style: function (feature: FeatureLike) {
+                
+                const size = feature.get('features').length;
+                let style: StyleLike | FlatStyleLike | undefined = styleCache[size];
+                if (!style) {
+                    style = new Style({
+                        image: new CircleStyle({
+                            radius: 15,
+                            stroke: new Stroke({ color: '#fff' }),
+                            fill: new Fill({ color: size > 1 ? '#3399CC' : '#66CC66' })
+                        }),
+                        text: new TextStyle({
+                            text: size.toString(),
+                            fill: new Fill({ color: '#fff' })
+                        })
+                    });
+                    styleCache[size] = style;
+                }
+                return style as any;
+            },// deserializeLayerStyle((layerDto as IVectorLayer).style),
             declutter: (layerDto as IVectorLayer).declutter ?? false,
             background: layerDto.background ?? undefined,
             updateWhileAnimating: (layerDto as IVectorLayer).updateWhileAnimating ?? false,
@@ -176,9 +216,9 @@ export function deserializeLayer(layerDto: IBaseLayer): BaseLayer {
     } else if (layerDto.type === 'VectorTile') {
         //todo
         let source = (layerDto as IVectorTileLayer).source ? deserializeSource((layerDto as IVectorTileLayer).source as any) : undefined
-        debugger
+        
         console.log((layerDto as IVectorTileLayer).style);
-        let style =(deserializeLayerStyle((layerDto as IVectorTileLayer).style) as any)??undefined;
+        let style = (deserializeLayerStyle((layerDto as IVectorTileLayer).style) as any) ?? undefined;
         layer = new VectorTileLayer({
             className: layerDto.className ?? 'ol-layer',
             opacity: layerDto.opacity ?? 1,
@@ -195,7 +235,7 @@ export function deserializeLayer(layerDto: IBaseLayer): BaseLayer {
             renderMode: (layerDto as IVectorTileLayer).renderMode as any,
             source: source,
             //todo 需要验证 
-            style:style,
+            style: style,
             declutter: (layerDto as IVectorTileLayer).declutter ?? false,
             background: layerDto.background ?? undefined,
             updateWhileAnimating: (layerDto as IVectorTileLayer).updateWhileAnimating ?? false,
@@ -227,10 +267,32 @@ export function deserializeLayer(layerDto: IBaseLayer): BaseLayer {
             cacheSize: undefined,
             properties: layerDto.properties || {},
         });
-    }else if (layerDto.type === 'Heatmap') {
+    } else if (layerDto.type === 'Heatmap') {
         //todo
-        layer=new HeatmapLayer({
-
+        let heatmapDto = layerDto as IHeatmap;
+        let source = heatmapDto.source ? deserializeSource(heatmapDto.source) : undefined
+        
+        let weight = layerDto.weight ?? 'weight';
+        if (isFunctionString(heatmapDto.weight!)) {
+            weight = injectFunction(weight);
+        }
+        layer = new HeatmapLayer({
+            className: layerDto.className ?? 'ol-layer',
+            opacity: layerDto.opacity ?? 1,
+            visible: layerDto.visible ?? true,
+            extent: layerDto.extent ?? undefined,
+            zIndex: layerDto.zIndex ?? undefined,
+            minResolution: layerDto.minResolution ?? undefined,
+            maxResolution: layerDto.maxResolution ?? undefined,
+            minZoom: layerDto.minZoom ?? undefined,
+            maxZoom: layerDto.maxZoom ?? undefined,
+            gradient: heatmapDto.gradient ?? ['#00f', '#0ff', '#0f0', '#ff0', '#f00'],
+            radius: heatmapDto.radius ?? 8,
+            blur: heatmapDto.blur ?? 15,
+            //TODO weight可能为函数
+            weight: weight,
+            source: source,
+            properties: layerDto.properties || {},
         })
     }
     else {
@@ -269,4 +331,20 @@ export function getSerializableLayerProps(layer: BaseLayer, excludeKeys = []) {
     });
 
     return cleanProps;
+}
+/**
+ * 
+ * @param str 判断字符串是否为函数
+ * @returns 
+ */
+export function isFunctionString(str: string): boolean {
+    if (typeof str !== 'string') return false;
+
+    // 普通函数 / 异步函数 / 生成器函数
+    const funcPattern = /^\s*(async\s*)?function(\*)?\s*\w*\s*\([^)]*\)\s*\{[\s\S]*\}\s*$/;
+
+    // 箭头函数 / 异步箭头函数
+    const arrowPattern = /^\s*(async\s*)?(\([^)]*\)|[a-zA-Z_$][\w$]*)\s*=>\s*([\s\S]+)$/;
+
+    return funcPattern.test(str) || arrowPattern.test(str);
 }

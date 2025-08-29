@@ -19,9 +19,10 @@ import type {
   IUTFGrid,
   ITileGrid,
   IWMTSTileGrid,
-  IVectorTile
+  IVectorTile,
+  ICluster
 } from '../dto/source';
-import { GeoTIFF, ImageArcGISRest, ImageWMS, OGCMapTile, OGCVectorTile, Source, TileArcGISRest, TileJSON, TileWMS, UTFGrid, WMTS, Zoomify} from 'ol/source';
+import { Cluster, GeoTIFF, ImageArcGISRest, ImageWMS, OGCMapTile, OGCVectorTile, Source, TileArcGISRest, TileJSON, TileWMS, UTFGrid, WMTS, Zoomify } from 'ol/source';
 import { deserializeFunction, serializeFunction } from './utils';
 // import type { TileGrid } from 'ol/tilegrid';
 import TileGrid from 'ol/tilegrid/TileGrid.js';
@@ -43,7 +44,7 @@ registerFunction('quadKey', quadKey);
 
 
 export function serializeSource(source: Source): ISerializedSource {
-  debugger
+  
   if (source instanceof XYZ) {
     let tileGrid = source.getTileGrid();
     let tileGridDto
@@ -333,8 +334,22 @@ export function serializeSource(source: Source): ISerializedSource {
       url: source.getUrl(),
     };
   }
-
+  //注:Cluster 继承自vectorSource，所以要先判断
+  if (source instanceof Cluster) {
+    
+    return {
+      type: 'Cluster',
+      attributions: (source.getAttributions() as any) ?? null,
+      distance: source.getDistance(),
+      minDistance: source.getMinDistance(),
+      geometryFunction: source['geometryFunction']?.toString() ?? undefined,
+      createCluster: source['createCustomCluster_']?.toString() ?? undefined,
+      source: serializeSource(source.getSource() as VectorSource) as IVectorSource,
+      wrapX: source.getWrapX()
+    }
+  }
   if (source instanceof VectorSource) {
+    
     let sourceDto: IVectorSource = {
       type: 'Vector',
       attributions: (source.getAttributions() as any) ?? null,
@@ -354,7 +369,6 @@ export function serializeSource(source: Source): ISerializedSource {
     };
     return sourceDto
   }
-
   if (source instanceof VectorTile) {
     let tileGrid = source.getTileGrid();
     let tileGridDto
@@ -428,7 +442,7 @@ export function serializeSource(source: Source): ISerializedSource {
 }
 
 export function deserializeSource(data: ISerializedSource): any {
-
+  
   switch (data.type) {
     case 'XYZ':
       let xyzSourceDto = data as IXYZSource
@@ -611,7 +625,7 @@ export function deserializeSource(data: ISerializedSource): any {
         zDirection: tileWMSSourceDto.zDirection ?? 0
       })
     case 'WMTS':
-      debugger
+      
       let wmtsTileGrid = new WMTSTileGrid({
         extent: (data.tileGrid?.extent as Extent),
         origin: data.tileGrid?.origin ?? undefined,
@@ -658,12 +672,33 @@ export function deserializeSource(data: ISerializedSource): any {
         //todo
         //imageLoadFunction:data.imageLoadFunction
       });
-
+    //注:Cluster 必须在 Vector 之前，因为它继承自vector
+    case 'Cluster':
+      
+      let clusterSourceDto = data as ICluster;
+      let source = deserializeSource(clusterSourceDto.source as IVectorSource);
+      //todo 这个函数恢复有问题，暂时不用
+      let geometryFunction =undefined; //clusterSourceDto.geometryFunction ? injectFunction(clusterSourceDto.geometryFunction) : undefined;
+      let createCluster = clusterSourceDto.createCluster ? injectFunction(clusterSourceDto.createCluster) : undefined;
+      return new Cluster({
+        attributions: clusterSourceDto.attributions as AttributionLike,
+        distance: clusterSourceDto.distance ?? 20,
+        minDistance: clusterSourceDto.minDistance ?? 0,
+        geometryFunction: geometryFunction,
+        createCluster: createCluster,
+        source: source as VectorSource,
+        wrapX: clusterSourceDto.wrapX ?? true
+      })
     case 'Vector':
       let vectorSourceDto = data as IVectorSource;
+      let format
+      if (vectorSourceDto.format) {
+        format = deserializeFormat(vectorSourceDto.format as FormatName);
+      }
+
       return new VectorSource({
         attributions: vectorSourceDto.attributions as AttributionLike,
-        format: deserializeFormat(vectorSourceDto.format as FormatName),
+        format: format,
         //TODO
         //features:undefined,
         //TODO
@@ -676,6 +711,7 @@ export function deserializeSource(data: ISerializedSource): any {
         //features: new GeoJSON().readFeatures(data.features),
         //loader
       });
+
     case 'VectorTile':
       let vectorTileDto = data as IVectorTile;
       return new VectorTile({

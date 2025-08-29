@@ -9,7 +9,7 @@ import { XYZ } from 'ol/source';
 export function serializeMap(map: Map) {
     const layers = serializeMapLayers(map);
     let viewDto = serializeView(map.getView());
-    debugger
+    
     let mapDto: IMap = {
         controls: [],
         interactions: [],

@@ -1,10 +1,10 @@
-import { Map, Tile, View } from "ol";
+import { Feature, Map, Tile, View } from "ol";
 import TileLayer from "ol/layer/Tile";
 import VectorLayer from "ol/layer/Vector";
 import HeatmapLayer from "ol/layer/Heatmap";
 import 'ol/ol.css';
 import { fromLonLat, Projection } from "ol/proj";
-import { XYZ, Vector, VectorTile as VectorTileSource, BingMaps, TileArcGISRest, ImageArcGISRest, TileJSON, WMTS, TileWMS, Zoomify, GeoTIFF, OGCMapTile, ImageWMS } from "ol/source";
+import { XYZ, Vector, VectorTile as VectorTileSource, BingMaps, TileArcGISRest, ImageArcGISRest, TileJSON, WMTS, TileWMS, Zoomify, GeoTIFF, OGCMapTile, ImageWMS, Cluster } from "ol/source";
 import { quadKey } from "ol/source/BingMaps";
 import { GeoJSON, WKT, WKB, MVT, KML } from "ol/format";
 import type { TileCoord } from "ol/tilecoord";
@@ -19,6 +19,15 @@ import WMTSTileGrid from "ol/tilegrid/WMTS";
 import WebGLTileLayer from 'ol/layer/WebGLTile.js';
 import VectorTileLayer from "ol/layer/VectorTile";
 import VectorSource from "ol/source/Vector";
+import { Point, type Geometry } from "ol/geom";
+import Style, { type StyleLike } from "ol/style/Style";
+import CircleStyle from "ol/style/Circle";
+import Stroke from "ol/style/Stroke";
+import TextStyle from "ol/style/Text";
+import Fill from "ol/style/Fill";
+import RegularShape from "ol/style/RegularShape";
+import type { FlatStyleLike } from "ol/style/flat";
+import type { FeatureLike } from "ol/Feature";
 let map: Map;
 //initMap();
 //deInitMap();
@@ -126,7 +135,7 @@ function deInitMap() {
     }, 5000);
 }
 function exportMap(filename: string = "map.json") {
-    debugger
+    
     let mapDto = serializeMap(map);
 
     const jsonStr = typeof mapDto === "string" ? mapDto : JSON.stringify(mapDto, null, 2);
@@ -434,7 +443,7 @@ function testZoomifySource() {
         zDirection: -1, // Ensure we get a tile with the screen resolution or higher
     });
     source.set('url', zoomifyUrl);
-    debugger;
+    
     const extent = source.getTileGrid()?.getExtent();
 
     // const retinaPixelRatio = 2;
@@ -501,7 +510,7 @@ function testGeoTIFFSource() {
         layers: [layer]
     });
     // setTimeout(() => {
-    //     debugger
+    //     
     //     map.getView().fit(layer.getExtent() as any, {
     //         //padding: [20, 20, 20, 20], // 可选，留一些边距
     //         duration: 500,             // 可选，动画时长
@@ -577,6 +586,15 @@ function testHeatMap() {
     if (map) {
         map.setTarget(undefined);
     }
+    let weight = function (feature: Feature<Geometry>) {
+        // 2012_Earthquakes_Mag5.kml stores the magnitude of each earthquake in a
+        // standards-violating <magnitude> tag in each Placemark.  We extract it from
+        // the Placemark's name instead.
+        
+        const name = feature.get('name');
+        const magnitude = parseFloat(name.substr(2));
+        return magnitude - 5;
+    };
     const heatmapLayer = new HeatmapLayer({
         source: new VectorSource({
             url: 'https://openlayers.org/en/v9.2.4/examples/data/kml/2012_Earthquakes_Mag5.kml',
@@ -586,15 +604,9 @@ function testHeatMap() {
         }),
         blur: 10,
         radius: 20,
-        weight: function (feature) {
-            // 2012_Earthquakes_Mag5.kml stores the magnitude of each earthquake in a
-            // standards-violating <magnitude> tag in each Placemark.  We extract it from
-            // the Placemark's name instead.
-            const name = feature.get('name');
-            const magnitude = parseFloat(name.substr(2));
-            return magnitude - 5;
-        },
+        weight: weight
     });
+    heatmapLayer.set('weight', weight)
 
     map = new Map({
         target: 'mapContainer',
@@ -604,6 +616,59 @@ function testHeatMap() {
         }),
         controls: [],
         layers: [heatmapLayer]
+    });
+}
+function testClusterSource() {
+    if (map) {
+        map.setTarget(undefined);
+    }
+    // const features = [];
+    const styleFunction = function (feature: FeatureLike) {
+        const size = feature.get('features').length;
+        let style: StyleLike | FlatStyleLike | undefined;
+        style = new Style({
+            image: new CircleStyle({
+                radius: 15,
+                stroke: new Stroke({ color: '#fff' }),
+                fill: new Fill({ color: size > 1 ? '#3399CC' : '#66CC66' })
+            }),
+            text: new TextStyle({
+                text: size.toString(),
+                fill: new Fill({ color: '#fff' })
+            })
+        });
+        styleCache[size] = style;
+        return style;
+    }
+
+    const source = new VectorSource({
+        //features: features,
+        url: "https://openlayers.org/en/v9.2.4/examples/data/kml/2012_Earthquakes_Mag5.kml",
+        format: new KML({
+            extractStyles: false,
+        }),
+    });
+    source.set('url', "https://openlayers.org/en/v9.2.4/examples/data/kml/2012_Earthquakes_Mag5.kml");
+    const clusterSource = new Cluster({
+        distance: 100,
+        minDistance: 100,
+        source: source,
+    });
+
+    const styleCache: Record<string, any> = {};
+    const clusters = new VectorLayer({
+        source: clusterSource,
+        style: styleFunction as any
+    });
+
+    map = new Map({
+        target: 'mapContainer',
+        view: new View({
+            center: [0, 0],
+            zoom: 2
+        }),
+        controls: [],
+        layers: [clusters]
     });
 }
 // 挂到 window 全局
@@ -623,3 +688,4 @@ function testHeatMap() {
 (window as any).testImageWMSSource = testImageWMSSource;
 (window as any).testVectorTileSource = testVectorTileSource;
 (window as any).testHeatMap = testHeatMap;
+(window as any).testClusterSource = testClusterSource;
