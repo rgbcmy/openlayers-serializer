@@ -103,6 +103,6 @@ npm test
 
 ## 📚 License
 
-MIT License © 2025 [Your Name](https://github.com/yourname)
+MIT License © 2025 [rgbcmy](https://github.com/rgbcmy)
 
 This project uses [OpenLayers](https://openlayers.org/) which is licensed under the **BSD 2-Clause License**.
