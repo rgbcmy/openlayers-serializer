@@ -1,5 +1,9 @@
 export type ISerializedSource =
-  | IXYZSource
+  IBingMaps
+  | IXYZ
+  | IOSM
+  | IStadiaMaps
+  | ITileDebug
   | ITileWMS
   | IWMTS
   | IZoomify
@@ -8,7 +12,6 @@ export type ISerializedSource =
   | IOGCMapTile
   | IVectorTile
   | IOGCVectorTile
-  | IOSMSource
   | IImageArcGISRest
   | IImageStatic
   | IImageWMS
@@ -28,7 +31,7 @@ export interface ISource {
   interpolate?: boolean | null;
 }
 
-export interface IXYZSource extends ISource {
+export interface IXYZ extends ISource {
   type: 'XYZ';
   attributions?: string[] | string | null;
   attributionsCollapsible?: boolean | null;
@@ -53,6 +56,23 @@ export interface IXYZSource extends ISource {
   transition?: number | null;
   zDirection?: number | null;
 }
+export interface IBingMaps extends ISource {
+  type: 'BingMaps';
+  casheSize?: number | null;
+  hidpi?: boolean | null;
+  culture?: string | null;
+  key: string;
+  imagerySet: string;
+  interpolate?: boolean | null;
+  maxZoom?: number | null;
+  reprojectionErrorThreshold?: number | null;
+  tileLoadFunction?: string;//((url: string, image: HTMLImageElement) =>
+  wrapX?: boolean | null;
+  transition?: number | null;
+  zDirection?: number | null;
+  placeholderTiles?: boolean | null;
+}
+
 export interface ITileWMS extends ISource {
   type: 'TileWMS';
   attributions?: string[] | string | null;
@@ -218,7 +238,7 @@ export interface IGeoTIFF extends ISource {
   convertToRGB?: boolean | 'auto';
   normalize: boolean;
   opaque: boolean;
-  projection?: string|null;
+  projection?: string | null;
   transition: number;
   wrapX: boolean;
   interpolate: boolean
@@ -232,8 +252,44 @@ export interface IUTFGrid extends ISource {
   wrapX: boolean;
   zDirection?: number | null;
 }
-export interface IOSMSource extends ISource {
+export interface IOSM extends ISource {
   type: 'OSM';
+  attributions?: string[] | string | null;
+  cacheSize?: number | null;
+  crossOrigin?: string | null;
+  interpolate?: boolean | null;
+  maxZoom?: number | null;
+  opaque?: boolean | null;
+  reprojectionErrorThreshold?: number | null;
+  tileLoadFunction?: string;//((url: string, image: HTMLImageElement) => void)
+  transition?: number | null;
+  url?: string | null;
+  wrapX?: boolean | null;
+  zDirection?: number | null;
+}
+export interface IStadiaMaps extends ISource {
+  type: 'StadiaMaps';
+  cacheSize?: number | null;
+  interpolate?: boolean | null;
+  layer?: string | null;
+  minZoom?: number | null;
+  maxZoom?: number | null;
+  reprojectionErrorThreshold?: number | null;
+  tileLoadFunction?: string;//((url: string, image: HTMLImageElement) =>
+  transition?: number | null;
+  url?: string | null;
+  wrapX?: boolean | null;
+  zDirection?: number | null;
+  apiKey?: string | null;
+  retina?: boolean | null;
+}
+export interface ITileDebug extends ISource {
+  type: 'TileDebug';
+  projection?: string | null;
+  tileGrid?: ITileGrid | null;
+  wrapX?: boolean | null;
+  zDirection?: number | null;
+  template?: string | null;
 }
 
 export interface IImageArcGISRest extends ISource {

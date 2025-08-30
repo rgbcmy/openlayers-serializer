@@ -1,7 +1,7 @@
 import type { ISerializedStyle } from "./style";
 import Layer from "ol/layer/Layer";
 import TileLayer from "ol/layer/Tile";
-import type { IGeoTIFF, IImageStatic, IOGCMapTile, ITileArcGISRest, ITileJSON, ITileWMS, IVectorSource, IVectorTile, IWMTS, IXYZSource, IDataTile, IZoomify, IStyle, IImageArcGISRest, IImageWMS } from "./source";
+import type { IGeoTIFF, IImageStatic, IOGCMapTile, ITileArcGISRest, ITileJSON, ITileWMS, IVectorSource, IVectorTile, IWMTS, IXYZ, IDataTile, IZoomify, IStyle, IImageArcGISRest, IImageWMS } from "./source";
 
 
 export interface IBaseLayer {
@@ -31,7 +31,7 @@ export interface IImageLayer extends IBaseLayer {
 
 export interface ITileLayer extends IBaseLayer {
     type: 'Tile';
-    source: IXYZSource | ITileWMS | IWMTS | IOGCMapTile | ITileArcGISRest | ITileJSON | IVectorTile | IZoomify;
+    source: IXYZ | ITileWMS | IWMTS | IOGCMapTile | ITileArcGISRest | ITileJSON | IVectorTile | IZoomify;
     preload: number | null;
     useInterimTilesOnError: boolean | null;
 }
@@ -39,7 +39,7 @@ export interface IWebGLTileLayer extends IBaseLayer {
     type: 'WebGLTile';
     style: IStyle | null,
     //todo
-    source: IDataTile | IGeoTIFF | IXYZSource | ITileWMS | IWMTS | IOGCMapTile | ITileArcGISRest | ITileJSON | IZoomify;
+    source: IDataTile | IGeoTIFF | IXYZ | ITileWMS | IWMTS | IOGCMapTile | ITileArcGISRest | ITileJSON | IZoomify;
     sources: any[] | null;
     preload: number | null;
     useInterimTilesOnError: boolean | null;

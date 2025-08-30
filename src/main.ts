@@ -4,7 +4,7 @@ import VectorLayer from "ol/layer/Vector";
 import HeatmapLayer from "ol/layer/Heatmap";
 import 'ol/ol.css';
 import { fromLonLat, Projection } from "ol/proj";
-import { XYZ, Vector, VectorTile as VectorTileSource, BingMaps, TileArcGISRest, ImageArcGISRest, TileJSON, WMTS, TileWMS, Zoomify, GeoTIFF, OGCMapTile, ImageWMS, Cluster } from "ol/source";
+import { XYZ, Vector, VectorTile as VectorTileSource, BingMaps, TileArcGISRest, ImageArcGISRest, TileJSON, WMTS, TileWMS, Zoomify, GeoTIFF, OGCMapTile, ImageWMS, Cluster, OSM, StadiaMaps, TileDebug } from "ol/source";
 import { quadKey } from "ol/source/BingMaps";
 import { GeoJSON, WKT, WKB, MVT, KML } from "ol/format";
 import type { TileCoord } from "ol/tilecoord";
@@ -135,7 +135,7 @@ function deInitMap() {
     }, 5000);
 }
 function exportMap(filename: string = "map.json") {
-    
+
     let mapDto = serializeMap(map);
 
     const jsonStr = typeof mapDto === "string" ? mapDto : JSON.stringify(mapDto, null, 2);
@@ -245,6 +245,65 @@ function testXYZSource() {
         controls: [],
         //[bingLayer,amapsLayer]
         layers: [bingLayer]
+    });
+}
+function testOSM() {
+    if (map) {
+        map.setTarget(undefined);
+    }
+    let osmLayer = new TileLayer({
+        source: new OSM()
+    })
+    map = new Map({
+        target: 'mapContainer',
+        view: new View({
+            center: [0, 0],
+            zoom: 2
+        }),
+        controls: [],
+        layers: [osmLayer]
+    });
+}
+function testStadiaMaps() {
+    if (map) {
+        map.setTarget(undefined);
+    }
+    let source = new StadiaMaps({
+        layer: 'alidade_smooth_dark',
+        retina: true,
+    })
+    source.set('layer', 'alidade_smooth_dark');
+    source.set('retina', true);
+    let stadiaLayer = new TileLayer({
+        source: source
+    })
+    map = new Map({
+        target: 'mapContainer',
+        view: new View({
+            center: [0, 0],
+            zoom: 2
+        }),
+        controls: [],
+        layers: [stadiaLayer]
+    });
+}
+function testTileDebugSource() {
+    if (map) {
+        map.setTarget(undefined);
+    }
+    map = new Map({
+        target: 'mapContainer',
+        view: new View({
+            center: [0, 0],
+            zoom: 2
+        }),
+        controls: [],
+        layers: [new TileLayer({
+            source: new OSM(),
+        }),
+        new TileLayer({
+            source: new TileDebug(),
+        }),]
     });
 }
 function testStaticImageSource() {
@@ -443,7 +502,7 @@ function testZoomifySource() {
         zDirection: -1, // Ensure we get a tile with the screen resolution or higher
     });
     source.set('url', zoomifyUrl);
-    
+
     const extent = source.getTileGrid()?.getExtent();
 
     // const retinaPixelRatio = 2;
@@ -590,7 +649,7 @@ function testHeatMap() {
         // 2012_Earthquakes_Mag5.kml stores the magnitude of each earthquake in a
         // standards-violating <magnitude> tag in each Placemark.  We extract it from
         // the Placemark's name instead.
-        
+
         const name = feature.get('name');
         const magnitude = parseFloat(name.substr(2));
         return magnitude - 5;
@@ -676,6 +735,9 @@ function testClusterSource() {
 (window as any).importMap = importMap;
 (window as any).testVectorSource = testVectorSource;
 (window as any).testXYZSource = testXYZSource;
+(window as any).testOSM = testOSM;
+(window as any).testStadiaMaps = testStadiaMaps;
+(window as any).testTileDebugSource = testTileDebugSource;
 (window as any).testStaticImageSource = testStaticImageSource;
 (window as any).testTileArcGISRestSource = testTileArcGISRestSource;
 (window as any).testImageArcGISRestSource = testImageArcGISRestSource;

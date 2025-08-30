@@ -13,16 +13,19 @@ import KML from 'ol/format/KML';
 import OSMXML from 'ol/format/OSMXML';
 import Polyline from 'ol/format/Polyline';
 import type {
-  ISerializedSource, IVectorSource, IXYZSource, IOGCMapTile, ITileArcGISRest, ITileWMS, ITileJSON, IZoomify,
+  ISerializedSource, IVectorSource, IXYZ, IOGCMapTile, ITileArcGISRest, ITileWMS, ITileJSON, IZoomify,
   IImageStatic, IImageWMS, IImageArcGISRest,
   IGeoTIFF,
   IUTFGrid,
   ITileGrid,
   IWMTSTileGrid,
   IVectorTile,
-  ICluster
+  ICluster,
+  IOSM,
+  IStadiaMaps,
+  ITileDebug
 } from '../dto/source';
-import { Cluster, GeoTIFF, ImageArcGISRest, ImageWMS, OGCMapTile, OGCVectorTile, Source, TileArcGISRest, TileJSON, TileWMS, UTFGrid, WMTS, Zoomify } from 'ol/source';
+import { Cluster, GeoTIFF, ImageArcGISRest, ImageWMS, OGCMapTile, OGCVectorTile, Source, StadiaMaps, TileArcGISRest, TileDebug, TileJSON, TileWMS, UTFGrid, WMTS, Zoomify } from 'ol/source';
 import { deserializeFunction, serializeFunction } from './utils';
 // import type { TileGrid } from 'ol/tilegrid';
 import TileGrid from 'ol/tilegrid/TileGrid.js';
@@ -32,7 +35,7 @@ import { toSize, type Size } from 'ol/size';
 import { all, bbox, tile } from 'ol/loadingstrategy'
 import type { TileCoord } from 'ol/tilecoord';
 import type { Projection } from 'ol/proj';
-import { quadKey } from "ol/source/BingMaps";
+import BingMaps, { quadKey } from "ol/source/BingMaps";
 import { injectFunction, registerItem, registry } from '../common/registry';
 import type { ServerType } from 'ol/source/wms';
 import type { SourceInfo } from 'ol/source/GeoTIFF';
@@ -44,7 +47,73 @@ registerItem('quadKey', quadKey);
 
 
 export function serializeSource(source: Source): ISerializedSource {
-  
+  if(source instanceof BingMaps){
+    return {
+      type: 'BingMaps',
+      casheSize:undefined,
+      hidpi: source['hidpi_'] ?? true,
+      culture: source['culture_'] || 'en-US',
+      key: source.getKey(),
+      imagerySet: source.getImagerySet(),
+      interpolate: source.getInterpolate() ?? true,
+      maxZoom: source.getTileGrid()?.getMaxZoom() || source.get('maxZoom') || 19,
+      reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
+      tileLoadFunction : serializeFunction(source.getTileLoadFunction()),
+      wrapX: source.getWrapX() ?? true,
+      transition: ((source as any).tileOptions.transition) || source.get('transition'),
+      zDirection: (source.zDirection as any) ?? 0,
+      placeholderTiles: source['placeholderTiles_'] as boolean | undefined,
+    }
+  }
+  if(source instanceof TileDebug){
+    return{
+      type:'TileDebug',
+      projection:source.getProjection()?.getCode()||null,
+      tileGrid:source.getTileGrid()?serializeTileGrid(source.getTileGrid() as TileGrid):null,
+      wrapX:source.getWrapX()??true,
+      zDirection:source.zDirection as any??0,
+      //todo
+      template:source.get('template')||null
+    }
+  }
+  if (source instanceof StadiaMaps) {
+    return {
+      type: 'StadiaMaps',
+      cacheSize: undefined,
+      interpolate: source.getInterpolate() ?? true,
+      layer: source.get('layer'),
+      minZoom: source.getTileGrid()?.getMinZoom() || source.get('minZoom'),
+      maxZoom: source.getTileGrid()?.getMaxZoom() || source.get('maxZoom'),
+      reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
+      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      transition: ((source as any).tileOptions.transition) || source.get('transition') || 250,
+      //todo
+      url: source.get('url'),
+      wrapX: source.getWrapX() ?? true,
+      zDirection: (source.zDirection as any) ?? 0,
+      //todo
+      apiKey: source.get('apiKey') as string | undefined,
+      //todo
+      retina: source.get('retina') as boolean | undefined,
+    };
+  }
+  if (source instanceof OSM) {
+    return {
+      type: 'OSM',
+      attributions: (source.getAttributions() as any) ?? null,
+      cacheSize: undefined,
+      crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin') || 'anonymous',
+      interpolate: source.getInterpolate() ?? true,
+      maxZoom: source.getTileGrid()?.getMaxZoom() || source.get('maxZoom') || 19,
+      opaque: ((source as any).opaque_) || source.get('opaque') || true,
+      reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
+      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      transition: ((source as any).tileOptions.transition) || source.get('transition') || 250,
+      url: source.get('url') || 'https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      wrapX: source.getWrapX() ?? true,
+      zDirection: (source.zDirection as any) ?? 0
+    };
+  }
   if (source instanceof XYZ) {
     let tileGrid = source.getTileGrid();
     let tileGridDto
@@ -52,7 +121,7 @@ export function serializeSource(source: Source): ISerializedSource {
       tileGridDto = serializeTileGrid(tileGrid);
     }
 
-    let sourceDto: IXYZSource = {
+    let sourceDto: IXYZ = {
       type: 'XYZ',
       attributions: (source.getAttributions() as any) ?? null,
       attributionsCollapsible: source.getAttributionsCollapsible() ?? true,
@@ -278,12 +347,6 @@ export function serializeSource(source: Source): ISerializedSource {
     }
   }
 
-  //todo
-  if (source instanceof OSM) {
-    return {
-      type: 'OSM',
-    };
-  }
   if (source instanceof ImageArcGISRest) {
     let sourceDto: IImageArcGISRest = {
       type: 'ImageArcGISRest',
@@ -336,7 +399,7 @@ export function serializeSource(source: Source): ISerializedSource {
   }
   //注:Cluster 继承自vectorSource，所以要先判断
   if (source instanceof Cluster) {
-    
+
     return {
       type: 'Cluster',
       attributions: (source.getAttributions() as any) ?? null,
@@ -349,7 +412,7 @@ export function serializeSource(source: Source): ISerializedSource {
     }
   }
   if (source instanceof VectorSource) {
-    
+
     let sourceDto: IVectorSource = {
       type: 'Vector',
       attributions: (source.getAttributions() as any) ?? null,
@@ -442,10 +505,82 @@ export function serializeSource(source: Source): ISerializedSource {
 }
 
 export function deserializeSource(data: ISerializedSource): any {
-  
+
   switch (data.type) {
+    case 'BingMaps':
+      return new BingMaps({
+        cacheSize:undefined,
+        hidpi: data.hidpi ?? true,
+        culture: data.culture || 'en-US',
+        key: data.key,
+        imagerySet: data.imagerySet,
+        interpolate: data.interpolate ?? true,
+        maxZoom: data.maxZoom ?? 19,
+        reprojectionErrorThreshold: data.reprojectionErrorThreshold ?? 0.5,
+        tileLoadFunction: data.tileLoadFunction ? injectFunction(data.tileLoadFunction) : undefined,
+        wrapX: data.wrapX ?? true,
+        transition: data.transition??undefined,
+        zDirection: data.zDirection ?? 0,
+        placeholderTiles: data.placeholderTiles??undefined
+      });
+
+    case 'TileDebug':
+      let tileDebugDto = data as ITileDebug;
+      return new TileDebug({
+        projection: tileDebugDto.projection ?? undefined,
+        tileGrid: tileDebugDto.tileGrid ? new TileGrid({
+          extent: (tileDebugDto.tileGrid.extent as Extent),
+          minZoom: tileDebugDto.tileGrid.minZoom ?? 0,
+          origin: tileDebugDto.tileGrid.origin ?? undefined,
+          origins: tileDebugDto.tileGrid.origins ?? undefined,
+          resolutions: tileDebugDto.tileGrid.resolutions ?? [],
+          sizes: tileDebugDto.tileGrid.sizes as Size[],
+          tileSize: tileDebugDto.tileGrid.tileSize ?? undefined,
+          tileSizes: tileDebugDto.tileGrid.tileSizes ?? undefined
+        }) : undefined,
+        wrapX: tileDebugDto.wrapX ?? true,
+        zDirection: tileDebugDto.zDirection ?? 0,
+        //todo
+        template: tileDebugDto.template ?? undefined
+      });
+    case 'OSM':
+      let osmSourceDto = data as IOSM
+      return new OSM({
+        attributions: osmSourceDto.attributions as AttributionLike,
+        cacheSize: osmSourceDto.cacheSize ?? undefined,
+        crossOrigin: osmSourceDto.crossOrigin,
+        interpolate: osmSourceDto.interpolate ?? true,
+        maxZoom: osmSourceDto.maxZoom ?? 19,
+        opaque: osmSourceDto.opaque ?? true,
+        reprojectionErrorThreshold: osmSourceDto.reprojectionErrorThreshold ?? 0.5,
+        tileLoadFunction: osmSourceDto.tileLoadFunction ? injectFunction(osmSourceDto.tileLoadFunction) : undefined,
+        url: osmSourceDto.url ?? 'https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+        wrapX: osmSourceDto.wrapX ?? true,
+        transition: osmSourceDto.transition ?? 250,
+        zDirection: osmSourceDto.zDirection ?? 0
+      });
+    case 'StadiaMaps':
+      let stadiaMapsDto = data as IStadiaMaps
+      return new StadiaMaps({
+        cacheSize: undefined,
+        interpolate: stadiaMapsDto.interpolate ?? true,
+        layer: stadiaMapsDto.layer ?? 'stamen_terrain',
+        minZoom: stadiaMapsDto.minZoom ?? undefined,
+        maxZoom: stadiaMapsDto.maxZoom ?? undefined,
+        reprojectionErrorThreshold: stadiaMapsDto.reprojectionErrorThreshold ?? 0.5,
+        tileLoadFunction: stadiaMapsDto.tileLoadFunction ? injectFunction(stadiaMapsDto.tileLoadFunction) : undefined,
+        transition: stadiaMapsDto.transition ?? 250,
+        //todo
+        url: stadiaMapsDto.url ?? undefined,
+        wrapX: stadiaMapsDto.wrapX ?? true,
+        zDirection: stadiaMapsDto.zDirection ?? 0,
+        //todo
+        apiKey: stadiaMapsDto.apiKey ?? undefined,
+        //todo
+        retina: stadiaMapsDto.retina ?? undefined,
+      });
     case 'XYZ':
-      let xyzSourceDto = data as IXYZSource
+      let xyzSourceDto = data as IXYZ
       //let tileUrlFunction = xyzSourceDto.tileUrlFunction ? eval("(" + xyzSourceDto.tileUrlFunction + ")") : undefined;
       let tileUrlFunction = xyzSourceDto.tileUrlFunction ? injectFunction(xyzSourceDto.tileUrlFunction) : undefined;
       let tileLoadFunction = xyzSourceDto.tileLoadFunction ? injectFunction(xyzSourceDto.tileLoadFunction) : undefined;
@@ -625,7 +760,7 @@ export function deserializeSource(data: ISerializedSource): any {
         zDirection: tileWMSSourceDto.zDirection ?? 0
       })
     case 'WMTS':
-      
+
       let wmtsTileGrid = new WMTSTileGrid({
         extent: (data.tileGrid?.extent as Extent),
         origin: data.tileGrid?.origin ?? undefined,
@@ -674,11 +809,11 @@ export function deserializeSource(data: ISerializedSource): any {
       });
     //注:Cluster 必须在 Vector 之前，因为它继承自vector
     case 'Cluster':
-      
+
       let clusterSourceDto = data as ICluster;
       let source = deserializeSource(clusterSourceDto.source as IVectorSource);
       //todo 这个函数恢复有问题，暂时不用
-      let geometryFunction =undefined; //clusterSourceDto.geometryFunction ? injectFunction(clusterSourceDto.geometryFunction) : undefined;
+      let geometryFunction = undefined; //clusterSourceDto.geometryFunction ? injectFunction(clusterSourceDto.geometryFunction) : undefined;
       let createCluster = clusterSourceDto.createCluster ? injectFunction(clusterSourceDto.createCluster) : undefined;
       return new Cluster({
         attributions: clusterSourceDto.attributions as AttributionLike,
