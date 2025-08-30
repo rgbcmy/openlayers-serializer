@@ -106,3 +106,9 @@ npm test
 MIT License © 2025 [rgbcmy](https://github.com/rgbcmy)
 
 This project uses [OpenLayers](https://openlayers.org/) which is licensed under the **BSD 2-Clause License**.
+
+## Support / Donate
+
+Your support helps keep this project maintained and improved:
+
+[![Donate via Stripe](https://buy.stripe.com/test_YOUR_LINK_HERE)](https://buy.stripe.com/test_YOUR_LINK_HERE)
