@@ -1,9 +1,11 @@
 export type ISerializedSource =
   IBingMaps
+  |IIIIFSource
   | IXYZ
   | IOSM
   | IStadiaMaps
   | ITileDebug
+  | IIIIFSource
   | ITileWMS
   | IWMTS
   | IZoomify
@@ -290,6 +292,49 @@ export interface ITileDebug extends ISource {
   wrapX?: boolean | null;
   zDirection?: number | null;
   template?: string | null;
+}
+export interface IIIIFSource extends ISource{
+  type:'IIIF';
+  cacheSize?: number | null;
+  crossOrigin?: string | null;
+  extent?: [number, number, number, number] | null;
+  format?: string | null;
+  interpolate?: boolean | null;
+  projection?: string | null;
+  quality?: string | null;
+  reprojectionErrorThreshold?: number | null;
+  resolutions?: number[] | null;
+  size?: [number, number] | null;
+  sizes?: [number, number][] | null;
+  supports?: string[] | null;
+  tilePixelRatio?: number | null;
+  tileSize?: number | [number, number] | null;
+  transition?: number | null;
+  url?: string;
+  version?: string | null;
+  zDirection?: number | null;
+}
+export interface IGoogle extends ISource{
+  type:"Google";
+  key:string|null;
+  mapType:string|null;
+  language:string|null;
+  region:string|null;
+  imageFormat?:string|null;
+  scale?:string|null;
+  highDpi:boolean|null;
+  layerTypes?:string[]|null;
+  overlay:boolean|null;
+  styles:any[]|null;
+  attributionsCollapsible:boolean|true;
+  interpolate:boolean|false;
+  cacheSize?:number|null
+  reprojectionErrorThreshold:number;
+  tileLoadFunction?:string|null;
+  wrapX?:boolean|null;
+  transition?:number|undefined;
+  zDirection?:number;
+
 }
 
 export interface IImageArcGISRest extends ISource {

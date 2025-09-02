@@ -23,9 +23,10 @@ import type {
   ICluster,
   IOSM,
   IStadiaMaps,
-  ITileDebug
+  ITileDebug,
+  IIIIFSource
 } from '../dto/source';
-import { Cluster, GeoTIFF, ImageArcGISRest, ImageWMS, OGCMapTile, OGCVectorTile, Source, StadiaMaps, TileArcGISRest, TileDebug, TileJSON, TileWMS, UTFGrid, WMTS, Zoomify } from 'ol/source';
+import { Cluster, GeoTIFF, IIIF, ImageArcGISRest, ImageWMS, OGCMapTile, OGCVectorTile, Source, StadiaMaps, TileArcGISRest, TileDebug, TileJSON, TileWMS, UTFGrid, WMTS, Zoomify } from 'ol/source';
 import { deserializeFunction, serializeFunction } from './utils';
 // import type { TileGrid } from 'ol/tilegrid';
 import TileGrid from 'ol/tilegrid/TileGrid.js';
@@ -47,10 +48,45 @@ registerItem('quadKey', quadKey);
 
 
 export function serializeSource(source: Source): ISerializedSource {
-  if(source instanceof BingMaps){
+  if (source instanceof IIIF) {
+    let tileGrid = source.getTileGrid();
+    let tileGridDto
+    if (tileGrid) {
+      tileGridDto = serializeTileGrid(tileGrid);
+    }
+    return {
+      type: 'IIIF',
+      attributions: (source.getAttributions() as any) ?? null,
+      attributionsCollapsible: source.getAttributionsCollapsible() ?? true,
+      cacheSize: undefined,
+      crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'),// || 'anonymous',
+      extent: source.getTileGrid()?.getExtent() as [number, number, number, number],
+      //todo
+      format: source.get('format') || 'jpg',
+      interpolate: source.getInterpolate() ?? true,
+      projection: source.getProjection()?.getCode() ?? undefined,
+      //todo
+      quality: source.get('quality') || 'default',
+      reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
+      resolutions: source.getTileGrid()?.getResolutions() || [],
+      //todo
+      size: source.get('size') as any,// source.get('size') as Size | Size[] | undefined,
+      sizes: tileGridDto?.sizes as any,// source.get('sizes') as Size[] | undefined,
+      //todo
+      supports: source.get('supports') as string[] | undefined,
+      //tilePixelRatio:
+      tileSize: tileGridDto?.tileSize,
+      transition: ((source as any).tileOptions.transition) || source.get('transition'),
+      //todo
+      url: source.get('url'),
+      version: source.get('version')
+    }
+
+  }
+  if (source instanceof BingMaps) {
     return {
       type: 'BingMaps',
-      casheSize:undefined,
+      casheSize: undefined,
       hidpi: source['hidpi_'] ?? true,
       culture: source['culture_'] || 'en-US',
       key: source.getKey(),
@@ -58,22 +94,22 @@ export function serializeSource(source: Source): ISerializedSource {
       interpolate: source.getInterpolate() ?? true,
       maxZoom: source.getTileGrid()?.getMaxZoom() || source.get('maxZoom') || 19,
       reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
-      tileLoadFunction : serializeFunction(source.getTileLoadFunction()),
+      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
       wrapX: source.getWrapX() ?? true,
       transition: ((source as any).tileOptions.transition) || source.get('transition'),
       zDirection: (source.zDirection as any) ?? 0,
       placeholderTiles: source['placeholderTiles_'] as boolean | undefined,
     }
   }
-  if(source instanceof TileDebug){
-    return{
-      type:'TileDebug',
-      projection:source.getProjection()?.getCode()||null,
-      tileGrid:source.getTileGrid()?serializeTileGrid(source.getTileGrid() as TileGrid):null,
-      wrapX:source.getWrapX()??true,
-      zDirection:source.zDirection as any??0,
+  if (source instanceof TileDebug) {
+    return {
+      type: 'TileDebug',
+      projection: source.getProjection()?.getCode() || null,
+      tileGrid: source.getTileGrid() ? serializeTileGrid(source.getTileGrid() as TileGrid) : null,
+      wrapX: source.getWrapX() ?? true,
+      zDirection: source.zDirection as any ?? 0,
       //todo
-      template:source.get('template')||null
+      template: source.get('template') || null
     }
   }
   if (source instanceof StadiaMaps) {
@@ -507,9 +543,34 @@ export function serializeSource(source: Source): ISerializedSource {
 export function deserializeSource(data: ISerializedSource): any {
 
   switch (data.type) {
+    case 'IIIF':
+      let iiifDto = data as IIIIFSource;
+      return new IIIF(
+        {
+          attributions: iiifDto.attributions as AttributionLike,
+          attributionsCollapsible:iiifDto.attributionsCollapsible??true,
+          cacheSize:undefined,
+          crossOrigin:iiifDto.crossOrigin,
+          extent:iiifDto.extent as Extent,
+          format:iiifDto.format??'jpg',
+          interpolate:iiifDto.interpolate??true,
+          projection:iiifDto.projection as any,
+          quality:iiifDto.quality??undefined,
+          reprojectionErrorThreshold:iiifDto.reprojectionErrorThreshold??0.5,
+          resolutions:iiifDto.resolutions??undefined,
+          size:iiifDto.size as Size,
+          sizes:iiifDto.sizes as Size[],
+          supports:iiifDto.supports??undefined,
+          tilePixelRatio:iiifDto.tilePixelRatio??undefined,
+          tileSize:iiifDto.tileSize??undefined,
+          transition:iiifDto.transition??undefined,
+          url:iiifDto.url,
+          version:iiifDto.version??undefined,
+          zDirection:iiifDto.zDirection??0
+        });
     case 'BingMaps':
       return new BingMaps({
-        cacheSize:undefined,
+        cacheSize: undefined,
         hidpi: data.hidpi ?? true,
         culture: data.culture || 'en-US',
         key: data.key,
@@ -519,9 +580,9 @@ export function deserializeSource(data: ISerializedSource): any {
         reprojectionErrorThreshold: data.reprojectionErrorThreshold ?? 0.5,
         tileLoadFunction: data.tileLoadFunction ? injectFunction(data.tileLoadFunction) : undefined,
         wrapX: data.wrapX ?? true,
-        transition: data.transition??undefined,
+        transition: data.transition ?? undefined,
         zDirection: data.zDirection ?? 0,
-        placeholderTiles: data.placeholderTiles??undefined
+        placeholderTiles: data.placeholderTiles ?? undefined
       });
 
     case 'TileDebug':

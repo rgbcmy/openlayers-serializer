@@ -4,9 +4,9 @@ import VectorLayer from "ol/layer/Vector";
 import HeatmapLayer from "ol/layer/Heatmap";
 import 'ol/ol.css';
 import { fromLonLat, Projection } from "ol/proj";
-import { XYZ, Vector, VectorTile as VectorTileSource, BingMaps, TileArcGISRest, ImageArcGISRest, TileJSON, WMTS, TileWMS, Zoomify, GeoTIFF, OGCMapTile, ImageWMS, Cluster, OSM, StadiaMaps, TileDebug } from "ol/source";
+import { XYZ, Vector, VectorTile as VectorTileSource, BingMaps, TileArcGISRest, ImageArcGISRest, TileJSON, WMTS, TileWMS, Zoomify, GeoTIFF, OGCMapTile, ImageWMS, Cluster, OSM, StadiaMaps, TileDebug, IIIF } from "ol/source";
 import { quadKey } from "ol/source/BingMaps";
-import { GeoJSON, WKT, WKB, MVT, KML } from "ol/format";
+import { GeoJSON, WKT, WKB, MVT, KML, IIIFInfo } from "ol/format";
 import type { TileCoord } from "ol/tilecoord";
 import { deserializeMap, serializeMap } from "./serializer";
 import { mapDto } from "./testData";
@@ -304,6 +304,57 @@ function testTileDebugSource() {
         new TileLayer({
             source: new TileDebug(),
         }),]
+    });
+}
+function testIIIFSource() {
+    if (map) {
+        map.setTarget(undefined);
+    }
+    let layer= new TileLayer();
+    let imageInfoUrl = "https://iiif.ub.uni-leipzig.de/iiif/j2k/0000/0107/0000010732/00000072.jpx/info.json";
+    fetch(imageInfoUrl)
+        .then(function (response) {
+            response
+                .json()
+                .then(function (imageInfo) {
+                    const options = new IIIFInfo(imageInfo).getTileSourceOptions();
+                    if (options === undefined || options.version === undefined) {
+                       console.log('Data seems to be no valid IIIF image information.');
+                        return;
+                    }
+                    options.zDirection = -1;
+                    const iiifTileSource = new IIIF(options);
+                    iiifTileSource.set('format', options.format);
+                    iiifTileSource.set('quality', options.quality);
+                    iiifTileSource.set('supports',options.supports)
+                    iiifTileSource.set('url',options.url);
+                    iiifTileSource.set('version',options.version);
+                    iiifTileSource.set('size',options.size);
+                    layer.setSource(iiifTileSource);
+                    map.setView(
+                        new View({
+                            resolutions: iiifTileSource.getTileGrid()?.getResolutions(),
+                            extent: iiifTileSource.getTileGrid()?.getExtent(),
+                            constrainOnlyCenter: true,
+                        }),
+                    );
+                    map.getView().fit(iiifTileSource.getTileGrid()?.getExtent()??[]);
+                })
+                .catch(function (body) {
+                    console.log('Could not read image info json. ');
+                });
+        })
+        .catch(function () {
+            console.log('Could not read data from URL.');
+        });
+    map = new Map({
+        target: 'mapContainer',
+        view: new View({
+            center: [0, 0],
+            zoom: 2,
+        }),
+        controls: [],
+        layers: [layer]
     });
 }
 function testStaticImageSource() {
@@ -742,6 +793,7 @@ function testClusterSource() {
 (window as any).testTileArcGISRestSource = testTileArcGISRestSource;
 (window as any).testImageArcGISRestSource = testImageArcGISRestSource;
 (window as any).testTileJSONSource = testTileJSONSource;
+(window as any).testIIIFSource = testIIIFSource;
 (window as any).testWMTSSource = testWMTSSource;
 (window as any).testTileWMSSource = testTileWMSSource;
 (window as any).testZoomifySource = testZoomifySource;

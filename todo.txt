@@ -2,8 +2,7 @@
       //todo 从urls推断出url
       //source 
       //BingMaps  目前已经失效了好像待确认
-      Google 
-      IIIF
+      Google //需要token
       //以下这几个是XYZ的子类
       CartoDB //这个已经失效了，可去ol仓库提pr
       //函数的序列化和反序列化比较重要，主要是要内置一些常用的函数
