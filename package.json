@@ -1,19 +1,48 @@
 {
   "name": "openlayers-serializer",
-  "private": true,
   "version": "0.1.0",
   "type": "module",
+  "main": "./dist/index.cjs.js",
+  "module": "./dist/index.es.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.es.js",
+      "require": "./dist/index.cjs.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./serializer": {
+      "import": "./dist/serializer.es.js",
+      "require": "./dist/serializer.cjs.js",
+      "types": "./dist/serializer.d.ts"
+    },
+    "./dto": {
+      "import": "./dist/dto.es.js",
+      "require": "./dist/dto.cjs.js",
+      "types": "./dist/dto.d.ts"
+    },
+    "./common": {
+      "import": "./dist/dto.es.js",
+      "require": "./dist/dto.cjs.js",
+      "types": "./dist/dto.d.ts"
+    }
+  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "ol": "9.2.4",
     "typescript": "~5.8.3",
-    "vite": "^7.0.4"
+    "vite": "^7.0.4",
+    "vite-plugin-dts": "^4.5.4"
   },
   "packageManager": "yarn@4.5.0",
-  "dependencies": {
+  "peerDependencies": {
     "ol": "9.2.4"
   },
   "engines": {
