@@ -1,17 +1,17 @@
-import XYZ from 'ol/source/XYZ';
-import OSM from 'ol/source/OSM';
-import ImageStatic from 'ol/source/ImageStatic';
-import VectorSource from 'ol/source/Vector';
-import VectorTile from 'ol/source/VectorTile';
-import GeoJSON from 'ol/format/GeoJSON';
-import MVT from 'ol/format/MVT';
-import WKT from 'ol/format/WKT';
-import TopoJSON from 'ol/format/TopoJSON';
-import GPX from 'ol/format/GPX';
-import IGC from 'ol/format/IGC';
-import KML from 'ol/format/KML';
-import OSMXML from 'ol/format/OSMXML';
-import Polyline from 'ol/format/Polyline';
+import XYZ from 'ol/source/XYZ.js';
+import OSM from 'ol/source/OSM.js';
+import ImageStatic from 'ol/source/ImageStatic.js';
+import VectorSource from 'ol/source/Vector.js';
+import VectorTile from 'ol/source/VectorTile.js';
+import GeoJSON from 'ol/format/GeoJSON.js';
+import MVT from 'ol/format/MVT.js';
+import WKT from 'ol/format/WKT.js';
+import TopoJSON from 'ol/format/TopoJSON.js';
+import GPX from 'ol/format/GPX.js';
+import IGC from 'ol/format/IGC.js';
+import KML from 'ol/format/KML.js';
+import OSMXML from 'ol/format/OSMXML.js';
+import Polyline from 'ol/format/Polyline.js';
 import type {
   ISerializedSource, IVectorSource, IXYZ, IOGCMapTile, ITileArcGISRest, ITileWMS, ITileJSON, IZoomify,
   IImageStatic, IImageWMS, IImageArcGISRest,
@@ -26,22 +26,22 @@ import type {
   ITileDebug,
   IIIIFSource
 } from '../dto/source';
-import { Cluster, GeoTIFF, IIIF, ImageArcGISRest, ImageWMS, OGCMapTile, OGCVectorTile, Source, StadiaMaps, TileArcGISRest, TileDebug, TileJSON, TileWMS, UTFGrid, WMTS, Zoomify } from 'ol/source';
+import { Cluster, GeoTIFF, IIIF, ImageArcGISRest, ImageWMS, OGCMapTile, OGCVectorTile, Source, StadiaMaps, TileArcGISRest, TileDebug, TileJSON, TileWMS, UTFGrid, WMTS, Zoomify } from 'ol/source.js';
 import { deserializeFunction, serializeFunction } from './utils';
 // import type { TileGrid } from 'ol/tilegrid';
 import TileGrid from 'ol/tilegrid/TileGrid.js';
-import type { AttributionLike } from 'ol/source/Source';
-import type { Extent } from 'ol/extent';
-import { toSize, type Size } from 'ol/size';
-import { all, bbox, tile } from 'ol/loadingstrategy'
-import type { TileCoord } from 'ol/tilecoord';
-import type { Projection } from 'ol/proj';
-import BingMaps, { quadKey } from "ol/source/BingMaps";
+import type { AttributionLike } from 'ol/source/Source.js';
+import type { Extent } from 'ol/extent.js';
+import { toSize, type Size } from 'ol/size.js';
+import { all, bbox, tile } from 'ol/loadingstrategy.js'
+import type { TileCoord } from 'ol/tilecoord.js';
+import type { Projection } from 'ol/proj.js';
+import BingMaps, { quadKey } from "ol/source/BingMaps.js";
 import { injectFunction, registerItem, registry } from '../common/registry';
-import type { ServerType } from 'ol/source/wms';
-import type { SourceInfo } from 'ol/source/GeoTIFF';
-import WMTSTileGrid from 'ol/tilegrid/WMTS';
-import type { RequestEncoding } from 'ol/source/WMTS';
+import type { ServerType } from 'ol/source/wms.js';
+import type { SourceInfo } from 'ol/source/GeoTIFF.js';
+import WMTSTileGrid from 'ol/tilegrid/WMTS.js';
+import type { RequestEncoding } from 'ol/source/WMTS.js';
 //注册全局函数
 registerItem('quadKey', quadKey);
 //矢量数据源加载策略

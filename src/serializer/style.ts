@@ -1,16 +1,12 @@
-import Style, { type StyleFunction, type StyleLike } from 'ol/style/Style';
-import Fill from 'ol/style/Fill';
-import Stroke from 'ol/style/Stroke';
-import CircleStyle from 'ol/style/Circle';
-import Icon from 'ol/style/Icon';
-import Text from 'ol/style/Text';
-import type { ISerializedCircle, ISerializedStyle, ISerializedFill, ISerializedIcon, ISerializedStroke, ISerializedText } from '../dto/style';
-import type { FlatStyle, FlatStyleLike, Rule } from 'ol/style/flat';
+import Style, { type StyleFunction, type StyleLike } from 'ol/style/Style.js';
+import Fill from 'ol/style/Fill.js';
+import Stroke from 'ol/style/Stroke.js';
+import CircleStyle from 'ol/style/Circle.js';
+import Icon from 'ol/style/Icon.js';
+import Text from 'ol/style/Text.js';
+import type { ISerializedCircle, ISerializedStyle, ISerializedFill, ISerializedIcon, ISerializedStroke, ISerializedText } from '../dto/style.js';
+import type { FlatStyle, FlatStyleLike, Rule } from 'ol/style/flat.js';
 // Add missing FlatStyle import
-import type { FeatureLike } from 'ol/Feature';
-import type { IStyle } from '../dto/source';
-import type { WebGLStyle } from 'ol/style/webgl';
-import type WebGLTileLayer from 'ol/layer/WebGLTile';
 import { isFunctionString } from './layer';
 import { injectFunction } from '../common/registry';
 

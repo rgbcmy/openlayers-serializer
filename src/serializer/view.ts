@@ -1,4 +1,4 @@
-import View, { type ViewOptions } from 'ol/View';
+import View, { type ViewOptions } from 'ol/View.js';
 import { cleanNull, cleanNullToUndefined, cleanUndefined } from './utils';
 import type { ISerializedView } from '../dto/view';
 

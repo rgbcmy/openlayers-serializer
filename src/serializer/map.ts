@@ -1,11 +1,7 @@
 import { Map } from 'ol';
-import type Layer from 'ol/layer/Layer';
 import type { IMap } from '../dto/map';
 import { deserializeView, serializeView } from './view';
-import {serializeSource} from './source';
 import { deserializeLayer, serializeMapLayers } from './layer';
-import TileLayer from 'ol/layer/Tile';
-import { XYZ } from 'ol/source';
 export function serializeMap(map: Map) {
     const layers = serializeMapLayers(map);
     let viewDto = serializeView(map.getView());

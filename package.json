@@ -1,51 +1,36 @@
 {
   "name": "openlayers-serializer",
-  "version": "0.1.0",
+  "version": "0.1.9",
   "type": "module",
-  "main": "./dist/index.cjs.js",
-  "module": "./dist/index.es.js",
-  "types": "./dist/index.d.ts",
+  "main": "dist/openlayers-serializer.cjs.js",
+  "module": "dist/openlayers-serializer.es.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/openlayers-serializer.es.js",
+      "require": "./dist/openlayers-serializer.cjs.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "files": [
     "dist"
   ],
-  "exports": {
-    ".": {
-      "import": "./dist/index.es.js",
-      "require": "./dist/index.cjs.js",
-      "types": "./dist/index.d.ts"
-    },
-    "./serializer": {
-      "import": "./dist/serializer.es.js",
-      "require": "./dist/serializer.cjs.js",
-      "types": "./dist/serializer.d.ts"
-    },
-    "./dto": {
-      "import": "./dist/dto.es.js",
-      "require": "./dist/dto.cjs.js",
-      "types": "./dist/dto.d.ts"
-    },
-    "./common": {
-      "import": "./dist/dto.es.js",
-      "require": "./dist/dto.cjs.js",
-      "types": "./dist/dto.d.ts"
-    }
-  },
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
   "devDependencies": {
-    "ol": "9.2.4",
     "typescript": "~5.8.3",
     "vite": "^7.0.4",
-    "vite-plugin-dts": "^4.5.4"
+    "vite-plugin-dts": "^4.5.4",
+    "vite-tsconfig-paths": "^5.1.4"
   },
-  "packageManager": "yarn@4.5.0",
   "peerDependencies": {
     "ol": "9.2.4"
   },
   "engines": {
     "node": ">=20.0.0"
-  }
+  },
+  "packageManager": "pnpm@10.15.0+sha512.486ebc259d3e999a4e8691ce03b5cac4a71cbeca39372a9b762cb500cfdf0873e2cb16abe3d951b1ee2cf012503f027b98b6584e4df22524e0c7450d9ec7aa7b"
 }

@@ -1,6 +1,4 @@
 import type { ISerializedStyle } from "./style";
-import Layer from "ol/layer/Layer";
-import TileLayer from "ol/layer/Tile";
 import type { IGeoTIFF, IImageStatic, IOGCMapTile, ITileArcGISRest, ITileJSON, ITileWMS, IVectorSource, IVectorTile, IWMTS, IXYZ, IDataTile, IZoomify, IStyle, IImageArcGISRest, IImageWMS } from "./source";
 
 
