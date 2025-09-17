@@ -10,4 +10,6 @@
       2.基础类要加入，如果Feature这些
       3.编写的时候需要有智能感知 推荐采用monaco-editor（vscode的面板）
 
+      -- 发布到npm上
+      npm run build 
       npm publish --access public   为发布到npm上
