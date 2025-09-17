@@ -5,8 +5,9 @@ import { deserializeLayer, serializeMapLayers } from './layer';
 export function serializeMap(map: Map) {
     const layers = serializeMapLayers(map);
     let viewDto = serializeView(map.getView());
-    
+    let mapName=map.get('name')??'Untitled';
     let mapDto: IMap = {
+        name:mapName,
         controls: [],
         interactions: [],
         layers: layers,
@@ -33,5 +34,6 @@ export function deserializeMap(mapDto: IMap): Map {
         maxTilesLoading: mapDto.maxTilesLoading,
         moveTolerance: mapDto.moveTolerance
     });
+    map.set('name',mapDto.name??"Untitled");
     return map;
 }

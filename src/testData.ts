@@ -1,6 +1,7 @@
 import type { IMap } from "./dto/map";
 
 export const mapDto:IMap ={
+    "name":"Untitled",
     "controls": [],
     "interactions": [],
     "layers": [
