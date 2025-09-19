@@ -24,6 +24,8 @@ export type ISerializedSource =
   | IDataTile
 
 export interface ISource {
+  id:string,
+  name:string,
   type: string;
   attributions?: string[] | string | null;
   attributionsCollapsible?: boolean | null;

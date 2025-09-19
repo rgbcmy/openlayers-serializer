@@ -2,6 +2,7 @@ import type { ISerializedView } from "./view";
 import type { ITileGrid } from "./source";
 import type {IBaseLayer, ISerializedLayer} from "./layer";
 export interface IMap{
+    id:string,
     name:string;
     //控件列表
     controls:any[];

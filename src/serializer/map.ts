@@ -7,6 +7,7 @@ export function serializeMap(map: Map) {
     let viewDto = serializeView(map.getView());
     let mapName=map.get('name')??'Untitled';
     let mapDto: IMap = {
+        id:map.get('id') || crypto.randomUUID(),
         name:mapName,
         controls: [],
         interactions: [],
@@ -35,5 +36,6 @@ export function deserializeMap(mapDto: IMap): Map {
         moveTolerance: mapDto.moveTolerance
     });
     map.set('name',mapDto.name??"Untitled");
+    map.set('id',mapDto.id??crypto.randomUUID())
     return map;
 }

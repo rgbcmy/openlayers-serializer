@@ -24,7 +24,8 @@ import type {
   IOSM,
   IStadiaMaps,
   ITileDebug,
-  IIIIFSource
+  IIIIFSource,
+  ISource
 } from '../dto/source';
 import { Cluster, GeoTIFF, IIIF, ImageArcGISRest, ImageWMS, OGCMapTile, OGCVectorTile, Source, StadiaMaps, TileArcGISRest, TileDebug, TileJSON, TileWMS, UTFGrid, WMTS, Zoomify } from 'ol/source.js';
 import { deserializeFunction, serializeFunction } from './utils';
@@ -48,6 +49,8 @@ registerItem('quadKey', quadKey);
 
 
 export function serializeSource(source: Source): ISerializedSource {
+  let id=source.get('id') || crypto.randomUUID();
+  let name=source.get('name')||"Untitled";
   if (source instanceof IIIF) {
     let tileGrid = source.getTileGrid();
     let tileGridDto
@@ -55,6 +58,8 @@ export function serializeSource(source: Source): ISerializedSource {
       tileGridDto = serializeTileGrid(tileGrid);
     }
     return {
+      id:id,
+      name:name,
       type: 'IIIF',
       attributions: (source.getAttributions() as any) ?? null,
       attributionsCollapsible: source.getAttributionsCollapsible() ?? true,
@@ -85,6 +90,8 @@ export function serializeSource(source: Source): ISerializedSource {
   }
   if (source instanceof BingMaps) {
     return {
+      id:id,
+      name:name,
       type: 'BingMaps',
       casheSize: undefined,
       hidpi: source['hidpi_'] ?? true,
@@ -103,6 +110,8 @@ export function serializeSource(source: Source): ISerializedSource {
   }
   if (source instanceof TileDebug) {
     return {
+      id:id,
+      name:name,
       type: 'TileDebug',
       projection: source.getProjection()?.getCode() || null,
       tileGrid: source.getTileGrid() ? serializeTileGrid(source.getTileGrid() as TileGrid) : null,
@@ -114,6 +123,8 @@ export function serializeSource(source: Source): ISerializedSource {
   }
   if (source instanceof StadiaMaps) {
     return {
+      id:id,
+      name:name,
       type: 'StadiaMaps',
       cacheSize: undefined,
       interpolate: source.getInterpolate() ?? true,
@@ -135,6 +146,8 @@ export function serializeSource(source: Source): ISerializedSource {
   }
   if (source instanceof OSM) {
     return {
+      id:id,
+      name:name,
       type: 'OSM',
       attributions: (source.getAttributions() as any) ?? null,
       cacheSize: undefined,
@@ -158,6 +171,8 @@ export function serializeSource(source: Source): ISerializedSource {
     }
 
     let sourceDto: IXYZ = {
+      id:id,
+      name:name,
       type: 'XYZ',
       attributions: (source.getAttributions() as any) ?? null,
       attributionsCollapsible: source.getAttributionsCollapsible() ?? true,
@@ -196,6 +211,8 @@ export function serializeSource(source: Source): ISerializedSource {
       tileGridDto = serializeTileGrid(tileGrid);
     }
     return {
+      id:id,
+      name:name,
       type: "TileArcGISRest",
       attributions: (source.getAttributions() as any) ?? null,
       cacheSize: null,
@@ -217,6 +234,8 @@ export function serializeSource(source: Source): ISerializedSource {
   }
   if (source instanceof TileJSON) {
     return {
+      id:id,
+      name:name,
       type: "TileJSON",
       attributions: (source.getAttributions() as any) ?? null,
       cacheSize: null,
@@ -242,6 +261,8 @@ export function serializeSource(source: Source): ISerializedSource {
       tileGridDto = serializeTileGrid(tileGrid);
     }
     return {
+      id:id,
+      name:name,
       type: "TileWMS",
       attributions: (source.getAttributions() as any) ?? null,
       cacheSize: null,
@@ -273,6 +294,8 @@ export function serializeSource(source: Source): ISerializedSource {
       wmtsTileGridDto = serializeWMTTileGrid(wmtsTileGrid);
     }
     return {
+      id:id,
+      name:name,
       type: "WMTS",
       attributions: (source.getAttributions() as any) ?? null,
       attributionsCollapsible: source.getAttributionsCollapsible() ?? true,
@@ -309,6 +332,8 @@ export function serializeSource(source: Source): ISerializedSource {
       tileGridDto = serializeTileGrid(tileGrid);
     }
     return {
+      id:id,
+      name:name,
       type: "Zoomify",
       attributions: (source.getAttributions() as any) ?? null,
       cacheSize: null,
@@ -333,6 +358,8 @@ export function serializeSource(source: Source): ISerializedSource {
   }
   if (source instanceof GeoTIFF) {
     return {
+      id:id,
+      name:name,
       type: "GeoTIFF",
       sources: source['sourceInfo_'] ?? [],
       sourceOptions: source['sourceOptions_'],
@@ -348,6 +375,8 @@ export function serializeSource(source: Source): ISerializedSource {
   }
   if (source instanceof UTFGrid) {
     return {
+      id:id,
+      name:name,
       type: "UTFGrid",
       preemptive: source['preemptive_'] ?? true,
       jsonp: source['jsonp_'] ?? false,
@@ -362,6 +391,8 @@ export function serializeSource(source: Source): ISerializedSource {
   }
   if (source instanceof OGCMapTile) {
     return {
+      id:id,
+      name:name,
       type: "OGCMapTile",
       //todo 无法获取url
       url: source.get('url'),
@@ -385,6 +416,8 @@ export function serializeSource(source: Source): ISerializedSource {
 
   if (source instanceof ImageArcGISRest) {
     let sourceDto: IImageArcGISRest = {
+      id:id,
+      name:name,
       type: 'ImageArcGISRest',
       attributions: (source.getAttributions() as any) ?? null,
       crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'),
@@ -403,6 +436,8 @@ export function serializeSource(source: Source): ISerializedSource {
 
   if (source instanceof ImageStatic) {
     return {
+      id:id,
+      name:name,
       type: 'ImageStatic',
       attributions: (source.getAttributions() as any),
       crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'), //|| 'anonymous',
@@ -416,6 +451,8 @@ export function serializeSource(source: Source): ISerializedSource {
   }
   if (source instanceof ImageWMS) {
     return {
+      id:id,
+      name:name,
       type: 'ImageWMS',
       attributions: (source.getAttributions() as any),
       crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'), //|| 'anonymous',
@@ -437,6 +474,8 @@ export function serializeSource(source: Source): ISerializedSource {
   if (source instanceof Cluster) {
 
     return {
+      id:id,
+      name:name,
       type: 'Cluster',
       attributions: (source.getAttributions() as any) ?? null,
       distance: source.getDistance(),
@@ -450,6 +489,8 @@ export function serializeSource(source: Source): ISerializedSource {
   if (source instanceof VectorSource) {
 
     let sourceDto: IVectorSource = {
+      id:id,
+      name:name,
       type: 'Vector',
       attributions: (source.getAttributions() as any) ?? null,
       //todo
@@ -475,6 +516,8 @@ export function serializeSource(source: Source): ISerializedSource {
       tileGridDto = serializeTileGrid(tileGrid);
     }
     return {
+      id:id,
+      name:name,
       type: 'VectorTile',
       attributions: (source.getAttributions() as any),
 
@@ -513,6 +556,8 @@ export function serializeSource(source: Source): ISerializedSource {
       tileGridDto = serializeTileGrid(tileGrid);
     }
     return {
+      id:id,
+      name:name,
       type: 'OGCVectorTile',
       //todo
       url: source.get('url'),
@@ -541,11 +586,11 @@ export function serializeSource(source: Source): ISerializedSource {
 }
 
 export function deserializeSource(data: ISerializedSource): any {
-
+  let source:Source;
   switch (data.type) {
-    case 'IIIF':
+    case 'IIIF':{
       let iiifDto = data as IIIIFSource;
-      return new IIIF(
+      source= new IIIF(
         {
           attributions: iiifDto.attributions as AttributionLike,
           attributionsCollapsible:iiifDto.attributionsCollapsible??true,
@@ -568,8 +613,11 @@ export function deserializeSource(data: ISerializedSource): any {
           version:iiifDto.version??undefined,
           zDirection:iiifDto.zDirection??0
         });
-    case 'BingMaps':
-      return new BingMaps({
+      break;
+    }
+
+    case 'BingMaps':{
+        source= new BingMaps({
         cacheSize: undefined,
         hidpi: data.hidpi ?? true,
         culture: data.culture || 'en-US',
@@ -584,10 +632,13 @@ export function deserializeSource(data: ISerializedSource): any {
         zDirection: data.zDirection ?? 0,
         placeholderTiles: data.placeholderTiles ?? undefined
       });
+      break;
+    }
+
 
     case 'TileDebug':
       let tileDebugDto = data as ITileDebug;
-      return new TileDebug({
+      source= new TileDebug({
         projection: tileDebugDto.projection ?? undefined,
         tileGrid: tileDebugDto.tileGrid ? new TileGrid({
           extent: (tileDebugDto.tileGrid.extent as Extent),
@@ -604,9 +655,10 @@ export function deserializeSource(data: ISerializedSource): any {
         //todo
         template: tileDebugDto.template ?? undefined
       });
+      break;
     case 'OSM':
       let osmSourceDto = data as IOSM
-      return new OSM({
+      source= new OSM({
         attributions: osmSourceDto.attributions as AttributionLike,
         cacheSize: osmSourceDto.cacheSize ?? undefined,
         crossOrigin: osmSourceDto.crossOrigin,
@@ -620,9 +672,10 @@ export function deserializeSource(data: ISerializedSource): any {
         transition: osmSourceDto.transition ?? 250,
         zDirection: osmSourceDto.zDirection ?? 0
       });
+      break;
     case 'StadiaMaps':
       let stadiaMapsDto = data as IStadiaMaps
-      return new StadiaMaps({
+      source= new StadiaMaps({
         cacheSize: undefined,
         interpolate: stadiaMapsDto.interpolate ?? true,
         layer: stadiaMapsDto.layer ?? 'stamen_terrain',
@@ -640,6 +693,7 @@ export function deserializeSource(data: ISerializedSource): any {
         //todo
         retina: stadiaMapsDto.retina ?? undefined,
       });
+      break;
     case 'XYZ':
       let xyzSourceDto = data as IXYZ
       //let tileUrlFunction = xyzSourceDto.tileUrlFunction ? eval("(" + xyzSourceDto.tileUrlFunction + ")") : undefined;
@@ -647,7 +701,7 @@ export function deserializeSource(data: ISerializedSource): any {
       let tileLoadFunction = xyzSourceDto.tileLoadFunction ? injectFunction(xyzSourceDto.tileLoadFunction) : undefined;
 
 
-      return new XYZ({
+      source= new XYZ({
         attributions: xyzSourceDto.attributions as AttributionLike,
         attributionsCollapsible: xyzSourceDto.attributionsCollapsible ?? true,
         cacheSize: xyzSourceDto.cacheSize ?? undefined,
@@ -682,9 +736,10 @@ export function deserializeSource(data: ISerializedSource): any {
         transition: xyzSourceDto.transition ?? 250,
         zDirection: xyzSourceDto.zDirection ?? 0
       });
+      break;
     case 'TileArcGISRest':
       let tileArcGISRestSourceDto = data as ITileArcGISRest
-      return new TileArcGISRest({
+      source= new TileArcGISRest({
         attributions: tileArcGISRestSourceDto.attributions as AttributionLike,
         cacheSize: tileArcGISRestSourceDto.cacheSize ?? undefined,
         crossOrigin: tileArcGISRestSourceDto.crossOrigin,
@@ -710,9 +765,10 @@ export function deserializeSource(data: ISerializedSource): any {
         urls: tileArcGISRestSourceDto.urls ?? undefined,
         zDirection: tileArcGISRestSourceDto.zDirection ?? 0
       })
+      break;
     case 'Zoomify':
       let zoomifySourceDto = data as IZoomify
-      return new Zoomify({
+      source= new Zoomify({
         attributions: zoomifySourceDto.attributions as AttributionLike,
         cacheSize: undefined,
         crossOrigin: zoomifySourceDto.crossOrigin,
@@ -728,10 +784,10 @@ export function deserializeSource(data: ISerializedSource): any {
         tileSize: (zoomifySourceDto.tileSize as any) ?? 256,
         zDirection: zoomifySourceDto.zDirection ?? 0,
       })
-
+      break;
     case 'GeoTIFF':
       let geoTIFFSourceDto = data as IGeoTIFF
-      let geoTIFFSource = new GeoTIFF({
+      source = new GeoTIFF({
         sources: (geoTIFFSourceDto.sources as SourceInfo[]),
         sourceOptions: geoTIFFSourceDto.sourceOptions,
         convertToRGB: geoTIFFSourceDto.convertToRGB ?? 'auto',
@@ -742,12 +798,14 @@ export function deserializeSource(data: ISerializedSource): any {
         wrapX: geoTIFFSourceDto.wrapX ?? false,
         interpolate: geoTIFFSourceDto.interpolate ?? true
       })
-      return geoTIFFSource;
+      break;
+
     case 'OSM':
-      return new OSM();
+      source= new OSM();
+      break;
     case 'UTFGrid':
       let utfGridDto = data as IUTFGrid
-      return new UTFGrid({
+      source= new UTFGrid({
         preemptive: utfGridDto.preemptive ?? true,
         jsonp: utfGridDto.jsonp ?? false,
         tileJSON: utfGridDto.tileJSON,
@@ -755,9 +813,10 @@ export function deserializeSource(data: ISerializedSource): any {
         wrapX: utfGridDto.wrapX,
         zDirection: utfGridDto.zDirection ?? 0
       })
+      break;
     case 'OGCMapTile':
       let oGCMapTileSourceDto = data as IOGCMapTile;
-      return new OGCMapTile({
+      source= new OGCMapTile({
         url: oGCMapTileSourceDto.url,
         context: oGCMapTileSourceDto.context,
         mediaType: oGCMapTileSourceDto.mediaType ?? undefined,
@@ -772,9 +831,10 @@ export function deserializeSource(data: ISerializedSource): any {
         transition: oGCMapTileSourceDto.transition ?? undefined,
         collections: oGCMapTileSourceDto.collections ?? undefined
       })
+      break;
     case 'TileJSON':
       let tileJSONSourceDto = data as ITileJSON;
-      return new TileJSON({
+      source= new TileJSON({
         attributions: tileJSONSourceDto.attributions as AttributionLike,
         cacheSize: undefined,
         crossOrigin: tileJSONSourceDto.crossOrigin,
@@ -788,9 +848,10 @@ export function deserializeSource(data: ISerializedSource): any {
         wrapX: tileJSONSourceDto.wrapX ?? true,
         zDirection: tileJSONSourceDto.zDirection ?? 0
       })
+      break;
     case 'TileWMS':
       let tileWMSSourceDto = data as ITileWMS;
-      return new TileWMS({
+      source= new TileWMS({
         attributions: tileWMSSourceDto.attributions as AttributionLike,
         attributionsCollapsible: tileWMSSourceDto.attributionsCollapsible ?? true,
         cacheSize: undefined,
@@ -820,6 +881,7 @@ export function deserializeSource(data: ISerializedSource): any {
         transition: tileWMSSourceDto.transition ?? undefined,
         zDirection: tileWMSSourceDto.zDirection ?? 0
       })
+      break;
     case 'WMTS':
 
       let wmtsTileGrid = new WMTSTileGrid({
@@ -832,7 +894,7 @@ export function deserializeSource(data: ISerializedSource): any {
         tileSizes: data.tileGrid?.tileSizes ?? undefined,
         matrixIds: data.tileGrid?.matrixIds ?? []
       });
-      return new WMTS({
+      source= new WMTS({
         attributions: data.attributions as AttributionLike,
         attributionsCollapsible: data.attributionsCollapsible ?? true,
         cacheSize: undefined,
@@ -857,8 +919,9 @@ export function deserializeSource(data: ISerializedSource): any {
         transition: data.transition ?? undefined,
         zDirection: data.zDirection ?? 0
       });
+      break;
     case 'ImageStatic':
-      return new ImageStatic({
+      source= new ImageStatic({
         attributions: data.attributions as AttributionLike,
         crossOrigin: data.crossOrigin,
         imageExtent: data.imageExtent,
@@ -868,23 +931,25 @@ export function deserializeSource(data: ISerializedSource): any {
         //todo
         //imageLoadFunction:data.imageLoadFunction
       });
+      break;
     //注:Cluster 必须在 Vector 之前，因为它继承自vector
     case 'Cluster':
 
       let clusterSourceDto = data as ICluster;
-      let source = deserializeSource(clusterSourceDto.source as IVectorSource);
+      let vecterSource = deserializeSource(clusterSourceDto.source as IVectorSource);
       //todo 这个函数恢复有问题，暂时不用
       let geometryFunction = undefined; //clusterSourceDto.geometryFunction ? injectFunction(clusterSourceDto.geometryFunction) : undefined;
       let createCluster = clusterSourceDto.createCluster ? injectFunction(clusterSourceDto.createCluster) : undefined;
-      return new Cluster({
+      source= new Cluster({
         attributions: clusterSourceDto.attributions as AttributionLike,
         distance: clusterSourceDto.distance ?? 20,
         minDistance: clusterSourceDto.minDistance ?? 0,
         geometryFunction: geometryFunction,
         createCluster: createCluster,
-        source: source as VectorSource,
+        source: vecterSource as VectorSource,
         wrapX: clusterSourceDto.wrapX ?? true
       })
+      break;
     case 'Vector':
       let vectorSourceDto = data as IVectorSource;
       let format
@@ -892,7 +957,7 @@ export function deserializeSource(data: ISerializedSource): any {
         format = deserializeFormat(vectorSourceDto.format as FormatName);
       }
 
-      return new VectorSource({
+      source= new VectorSource({
         attributions: vectorSourceDto.attributions as AttributionLike,
         format: format,
         //TODO
@@ -907,10 +972,10 @@ export function deserializeSource(data: ISerializedSource): any {
         //features: new GeoJSON().readFeatures(data.features),
         //loader
       });
-
+      break;
     case 'VectorTile':
       let vectorTileDto = data as IVectorTile;
-      return new VectorTile({
+      source= new VectorTile({
         attributions: vectorTileDto.attributions as AttributionLike,
         attributionsCollapsible: vectorTileDto.attributionsCollapsible ?? true,
         cacheSize: undefined,
@@ -942,10 +1007,10 @@ export function deserializeSource(data: ISerializedSource): any {
         wrapX: vectorTileDto.wrapX ?? true,
         zDirection: vectorTileDto.zDirection ?? 1
       })
-
+      break;
 
     case 'ImageArcGISRest':
-      let ImageArcGISRestSource = new ImageArcGISRest({
+       source = new ImageArcGISRest({
         attributions: data.attributions as AttributionLike,
         crossOrigin: data.crossOrigin,
         hidpi: data.hidpi ?? true,
@@ -958,9 +1023,9 @@ export function deserializeSource(data: ISerializedSource): any {
         resolutions: data.resolutions ?? undefined,
         url: data.url
       });
-      return ImageArcGISRestSource
+      break;
     case 'ImageWMS':
-      let ImageWMSSource = new ImageWMS({
+       source = new ImageWMS({
         attributions: data.attributions as AttributionLike,
         crossOrigin: data.crossOrigin,
         hidpi: data.hidpi ?? true,
@@ -974,11 +1039,16 @@ export function deserializeSource(data: ISerializedSource): any {
         resolutions: data.resolutions ?? undefined,
         url: data.url
       });
-      return ImageWMSSource
+       break;
     default:
       // Type assertion to ensure data has a 'type' property
       throw new Error(`Unsupported source type: ${(data as ISerializedSource).type}`);
   }
+  source.setProperties({
+    id:data.id??crypto.randomUUID(),
+    name:data.name??"Untitled",
+  })
+  return source
 }
 function getZoomifyImageSize(zoomifySource: Zoomify): [number, number] {
   const extent = zoomifySource.getTileGrid()?.getExtent() as [number, number, number, number];
