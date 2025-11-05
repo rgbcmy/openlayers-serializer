@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>重构测试 - OpenLayers Serializer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        
+        .test-section h3 {
+            margin-top: 0;
+            color: #333;
+        }
+        
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+        
+        button {
+            padding: 8px 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 重构测试 - OpenLayers Serializer</h1>
+        <p>测试重构后的序列化器架构</p>
+        
+        <div class="test-section info">
+            <h3>📋 测试状态</h3>
+            <div id="status">等待测试开始...</div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🚀 快速测试</h3>
+            <button onclick="testOSMSerializer()">测试 OSM 序列化器</button>
+            <button onclick="testXYZSerializer()">测试 XYZ 序列化器</button>
+            <button onclick="testRegistry()">测试序列化器注册表</button>
+            <button onclick="runAllTests()">运行所有测试</button>
+        </div>
+        
+        <div class="test-section">
+            <h3>📄 测试输出</h3>
+            <pre id="output">测试输出将显示在这里...\n</pre>
+        </div>
+        
+        <div class="test-section">
+            <h3>📊 支持的类型</h3>
+            <div id="supported-types">加载中...</div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { Map, View } from 'ol';
+        import OSM from 'ol/source/OSM.js';
+        import XYZ from 'ol/source/XYZ.js';
+        import TileLayer from 'ol/layer/Tile.js';
+        
+        // 导入新的序列化器
+        import { 
+            serializeSource, 
+            deserializeSource, 
+            getSupportedSourceTypes 
+        } from './src/serializer/source-new.js';
+        
+        let testResults = [];
+        
+        // 测试OSM序列化器
+        window.testOSMSerializer = function() {
+            try {
+                log('🧪 测试 OSM 序列化器...');
+                
+                // 创建OSM source
+                const osmSource = new OSM({
+                    url: 'https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png'
+                });
+                osmSource.set('id', 'test-osm-001');
+                osmSource.set('name', 'Test OSM Source');
+                
+                // 序列化
+                const serialized = serializeSource(osmSource);
+                log('✅ OSM 序列化成功:', serialized);
+                
+                // 反序列化
+                const deserialized = deserializeSource(serialized);
+                log('✅ OSM 反序列化成功:', {
+                    type: deserialized.constructor.name,
+                    id: deserialized.get('id'),
+                    name: deserialized.get('name'),
+                    url: deserialized.get('url')
+                });
+                
+                updateStatus('OSM 序列化器测试通过', 'success');
+                testResults.push({ test: 'OSM', result: 'PASS' });
+                
+            } catch (error) {
+                log('❌ OSM 序列化器测试失败:', error);
+                updateStatus('OSM 序列化器测试失败: ' + error.message, 'error');
+                testResults.push({ test: 'OSM', result: 'FAIL', error: error.message });
+            }
+        };
+        
+        // 测试XYZ序列化器
+        window.testXYZSerializer = function() {
+            try {
+                log('🧪 测试 XYZ 序列化器...');
+                
+                // 创建XYZ source
+                const xyzSource = new XYZ({
+                    url: 'https://server.example.com/{z}/{x}/{y}.png',
+                    maxZoom: 18
+                });
+                xyzSource.set('id', 'test-xyz-001');
+                xyzSource.set('name', 'Test XYZ Source');
+                
+                // 序列化
+                const serialized = serializeSource(xyzSource);
+                log('✅ XYZ 序列化成功:', serialized);
+                
+                // 反序列化
+                const deserialized = deserializeSource(serialized);
+                log('✅ XYZ 反序列化成功:', {
+                    type: deserialized.constructor.name,
+                    id: deserialized.get('id'),
+                    name: deserialized.get('name'),
+                    url: deserialized.get('url'),
+                    maxZoom: deserialized.getTileGrid()?.getMaxZoom()
+                });
+                
+                updateStatus('XYZ 序列化器测试通过', 'success');
+                testResults.push({ test: 'XYZ', result: 'PASS' });
+                
+            } catch (error) {
+                log('❌ XYZ 序列化器测试失败:', error);
+                updateStatus('XYZ 序列化器测试失败: ' + error.message, 'error');
+                testResults.push({ test: 'XYZ', result: 'FAIL', error: error.message });
+            }
+        };
+        
+        // 测试序列化器注册表
+        window.testRegistry = function() {
+            try {
+                log('🧪 测试序列化器注册表...');
+                
+                const supportedTypes = getSupportedSourceTypes();
+                log('✅ 支持的source类型:', supportedTypes);
+                
+                if (supportedTypes.includes('OSM') && supportedTypes.includes('XYZ')) {
+                    updateStatus('序列化器注册表测试通过', 'success');
+                    testResults.push({ test: 'Registry', result: 'PASS' });
+                } else {
+                    throw new Error('缺少预期的序列化器类型');
+                }
+                
+                // 更新支持的类型显示
+                document.getElementById('supported-types').innerHTML = 
+                    supportedTypes.map(type => `<span style="background:#e3f2fd;padding:2px 8px;margin:2px;border-radius:3px;display:inline-block;">${type}</span>`).join('');
+                
+            } catch (error) {
+                log('❌ 序列化器注册表测试失败:', error);
+                updateStatus('序列化器注册表测试失败: ' + error.message, 'error');
+                testResults.push({ test: 'Registry', result: 'FAIL', error: error.message });
+            }
+        };
+        
+        // 运行所有测试
+        window.runAllTests = function() {
+            testResults = [];
+            log('🚀 开始运行所有测试...\n');
+            
+            testOSMSerializer();
+            testXYZSerializer();
+            testRegistry();
+            
+            setTimeout(() => {
+                const passed = testResults.filter(r => r.result === 'PASS').length;
+                const failed = testResults.filter(r => r.result === 'FAIL').length;
+                
+                log(`\n📊 测试总结:`);
+                log(`✅ 通过: ${passed}`);
+                log(`❌ 失败: ${failed}`);
+                log(`📈 成功率: ${((passed / (passed + failed)) * 100).toFixed(1)}%`);
+                
+                if (failed === 0) {
+                    updateStatus(`所有测试通过! (${passed}/${passed + failed})`, 'success');
+                } else {
+                    updateStatus(`测试完成，有 ${failed} 个失败`, 'error');
+                }
+            }, 100);
+        };
+        
+        // 辅助函数
+        function updateStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.parentElement.className = `test-section ${type}`;
+        }
+        
+        function log(message, data = null) {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            if (data) {
+                output.textContent += `[${timestamp}] ${message}\n${JSON.stringify(data, null, 2)}\n\n`;
+            } else {
+                output.textContent += `[${timestamp}] ${message}\n`;
+            }
+            
+            output.scrollTop = output.scrollHeight;
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 重构测试页面启动');
+            testRegistry(); // 自动显示支持的类型
+        });
+    </script>
+</body>
+</html>

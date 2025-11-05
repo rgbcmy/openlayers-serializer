@@ -134,7 +134,6 @@ export interface IZoomify extends ISource {
   tilePixelRatio?: number | null;
   reprojectionErrorThreshold?: number | null;
   url?: string;
-  //todo
   tierSizeCalculation?: 'default' | 'truncate',
   size?: [number, number] | null;
   extent?: [number, number, number, number] | null;

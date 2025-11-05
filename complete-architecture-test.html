@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>完整架构测试 - OpenLayers Serializer</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.2.1/ol.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f7;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            border-radius: 8px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            border-left: 4px solid #007aff;
+        }
+        
+        .stat-number {
+            font-size: 36px;
+            font-weight: bold;
+            color: #007aff;
+            margin-bottom: 10px;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .type-list {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 15px 0;
+        }
+        
+        .type-tag {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 8px;
+            margin: 2px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #28a745;
+        }
+        
+        .test-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            background: #007aff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        button:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+        
+        button.success {
+            background: #28a745;
+        }
+        
+        button.warning {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            border-radius: 6px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+        }
+        
+        .summary {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 完整架构测试</h1>
+            <p>验证重构后的模块化序列化器完整架构</p>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="source-count">0</div>
+                <div class="stat-label">Source 序列化器</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="layer-count">0</div>
+                <div class="stat-label">Layer 序列化器</div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>📡 Source类型总览</h3>
+            <div id="source-types" class="type-list">加载中...</div>
+            <div class="test-buttons">
+                <button onclick="testAllSources()">测试所有Source</button>
+                <button onclick="testAdvancedSources()" class="warning">测试高级Source</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🗂️ Layer类型总览</h3>
+            <div id="layer-types" class="type-list">加载中...</div>
+            <div class="test-buttons">
+                <button onclick="testAllLayers()">测试所有Layer</button>
+                <button onclick="testAdvancedLayers()" class="warning">测试高级Layer</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🧪 完整架构测试</h3>
+            <div class="test-buttons">
+                <button onclick="runCompleteArchitectureTest()" class="success">运行完整测试</button>
+                <button onclick="showTodoComparison()">对比TODO清单</button>
+                <button onclick="clearOutput()">清空输出</button>
+            </div>
+        </div>
+        
+        <div class="output" id="output">等待测试开始...\n</div>
+        
+        <div class="summary" id="summary" style="display: none;">
+            <h2>🎯 架构重构成果总结</h2>
+            <div style="display: flex; justify-content: center; gap: 40px; font-size: 18px; font-weight: 600;">
+                <div>Source: <span id="final-source-count">0</span>个</div>
+                <div>Layer: <span id="final-layer-count">0</span>个</div>
+                <div>成功率: <span id="success-rate">0%</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        let testResults = [];
+        let totalTests = 0;
+        let passedTests = 0;
+        
+        // 导入序列化功能
+        import { 
+            serializeSource, 
+            deserializeSource, 
+            getSupportedSourceTypes 
+        } from './src/serializer/source-new.js';
+        
+        import { 
+            serializeLayer, 
+            deserializeLayer, 
+            getSupportedLayerTypes 
+        } from './src/serializer/layer-new.js';
+        
+        // 导入OpenLayers组件
+        import { Tile as TileLayer, Vector as VectorLayer, Image as ImageLayer, Heatmap as HeatmapLayer, Group as GroupLayer } from 'ol/layer.js';
+        import { OSM, XYZ, Vector as VectorSource, BingMaps, TileDebug, StadiaMaps, TileWMS, ImageStatic, IIIF, Cluster, GeoTIFF, VectorTile, WMTS, UTFGrid } from 'ol/source.js';
+        import { Point } from 'ol/geom.js';
+        import { Feature } from 'ol';
+        
+        // 显示支持的类型
+        window.showSupportedTypes = function() {
+            try {
+                const sourceTypes = getSupportedSourceTypes();
+                const layerTypes = getSupportedLayerTypes();
+                
+                document.getElementById('source-count').textContent = sourceTypes.length;
+                document.getElementById('layer-count').textContent = layerTypes.length;
+                
+                document.getElementById('source-types').innerHTML = 
+                    sourceTypes.map(type => `<span class="type-tag">${type}</span>`).join('');
+                document.getElementById('layer-types').innerHTML = 
+                    layerTypes.map(type => `<span class="type-tag">${type}</span>`).join('');
+                
+                log(`📡 支持的Source类型 (${sourceTypes.length}个): ${sourceTypes.join(', ')}`);
+                log(`🗂️ 支持的Layer类型 (${layerTypes.length}个): ${layerTypes.join(', ')}`);
+                
+            } catch (error) {
+                log('❌ 获取支持类型失败:', error.message);
+            }
+        };
+        
+        // 测试所有Source
+        window.testAllSources = function() {
+            log('🧪 开始测试所有Source序列化器...\n');
+            
+            const coreSourceTests = [
+                { name: 'OSM', factory: () => new OSM() },
+                { name: 'XYZ', factory: () => new XYZ({ url: 'https://example.com/{z}/{x}/{y}.png' }) },
+                { name: 'Vector', factory: () => new VectorSource({ 
+                    features: [new Feature({ geometry: new Point([0, 0]) })]
+                }) },
+                { name: 'TileDebug', factory: () => new TileDebug() },
+                { name: 'ImageStatic', factory: () => new ImageStatic({
+                    url: 'https://example.com/image.jpg',
+                    imageExtent: [0, 0, 1, 1]
+                }) }
+            ];
+            
+            runSourceTests(coreSourceTests, 'Core Source');
+        };
+        
+        // 测试高级Source
+        window.testAdvancedSources = function() {
+            log('🧪 开始测试高级Source序列化器...\n');
+            
+            const advancedSourceTests = [
+                { name: 'Cluster', factory: () => new Cluster({ 
+                    source: new VectorSource({ 
+                        features: [new Feature({ geometry: new Point([0, 0]) })]
+                    })
+                }) },
+                { name: 'VectorTile', factory: () => new VectorTile({
+                    url: 'https://example.com/{z}/{x}/{y}.pbf'
+                }) }
+            ];
+            
+            runSourceTests(advancedSourceTests, 'Advanced Source');
+        };
+        
+        // 测试所有Layer
+        window.testAllLayers = function() {
+            log('🧪 开始测试所有Layer序列化器...\n');
+            
+            const coreLayerTests = [
+                { name: 'TileLayer', factory: () => new TileLayer({ source: new OSM() }) },
+                { name: 'VectorLayer', factory: () => new VectorLayer({ 
+                    source: new VectorSource({ 
+                        features: [new Feature({ geometry: new Point([0, 0]) })]
+                    })
+                }) }
+            ];
+            
+            runLayerTests(coreLayerTests, 'Core Layer');
+        };
+        
+        // 测试高级Layer
+        window.testAdvancedLayers = function() {
+            log('🧪 开始测试高级Layer序列化器...\n');
+            
+            const advancedLayerTests = [
+                { name: 'ImageLayer', factory: () => new ImageLayer({ 
+                    source: new ImageStatic({
+                        url: 'https://example.com/image.jpg',
+                        imageExtent: [0, 0, 1, 1]
+                    })
+                }) },
+                { name: 'HeatmapLayer', factory: () => new HeatmapLayer({
+                    source: new VectorSource({ 
+                        features: [new Feature({ geometry: new Point([0, 0]) })]
+                    })
+                }) },
+                { name: 'GroupLayer', factory: () => new GroupLayer({
+                    layers: [new TileLayer({ source: new OSM() })]
+                }) }
+            ];
+            
+            runLayerTests(advancedLayerTests, 'Advanced Layer');
+        };
+        
+        // 运行Source测试
+        function runSourceTests(tests, category) {
+            let passed = 0;
+            let failed = 0;
+            
+            tests.forEach(({ name, factory }) => {
+                try {
+                    totalTests++;
+                    log(`  测试 ${name}...`);
+                    
+                    const source = factory();
+                    source.set('id', `test-${name.toLowerCase()}-${Date.now()}`);
+                    source.set('name', `Test ${name}`);
+                    
+                    const serialized = serializeSource(source);
+                    log(`    ✅ ${name} 序列化成功`);
+                    
+                    const deserialized = deserializeSource(serialized);
+                    log(`    ✅ ${name} 反序列化成功`);
+                    
+                    passed++;
+                    passedTests++;
+                    testResults.push({ category, type: 'Source', name, result: 'PASS' });
+                    
+                } catch (error) {
+                    log(`    ❌ ${name} 测试失败: ${error.message}`);
+                    failed++;
+                    testResults.push({ category, type: 'Source', name, result: 'FAIL', error: error.message });
+                }
+            });
+            
+            log(`\n📊 ${category}测试总结: ${passed}/${tests.length} 通过\n`);
+        }
+        
+        // 运行Layer测试
+        function runLayerTests(tests, category) {
+            let passed = 0;
+            let failed = 0;
+            
+            tests.forEach(({ name, factory }) => {
+                try {
+                    totalTests++;
+                    log(`  测试 ${name}...`);
+                    
+                    const layer = factory();
+                    layer.set('id', `test-${name.toLowerCase()}-${Date.now()}`);
+                    layer.set('name', `Test ${name}`);
+                    
+                    const serialized = serializeLayer(layer);
+                    log(`    ✅ ${name} 序列化成功`);
+                    
+                    const deserialized = deserializeLayer(serialized);
+                    log(`    ✅ ${name} 反序列化成功`);
+                    
+                    passed++;
+                    passedTests++;
+                    testResults.push({ category, type: 'Layer', name, result: 'PASS' });
+                    
+                } catch (error) {
+                    log(`    ❌ ${name} 测试失败: ${error.message}`);
+                    failed++;
+                    testResults.push({ category, type: 'Layer', name, result: 'FAIL', error: error.message });
+                }
+            });
+            
+            log(`\n📊 ${category}测试总结: ${passed}/${tests.length} 通过\n`);
+        }
+        
+        // 运行完整架构测试
+        window.runCompleteArchitectureTest = function() {
+            testResults = [];
+            totalTests = 0;
+            passedTests = 0;
+            
+            log('🚀 开始运行完整架构测试...\n');
+            
+            setTimeout(() => {
+                testAllSources();
+                setTimeout(() => {
+                    testAdvancedSources();
+                    setTimeout(() => {
+                        testAllLayers();
+                        setTimeout(() => {
+                            testAdvancedLayers();
+                            setTimeout(() => {
+                                showFinalResults();
+                            }, 500);
+                        }, 500);
+                    }, 500);
+                }, 500);
+            }, 500);
+        };
+        
+        // 显示TODO对比
+        window.showTodoComparison = function() {
+            log('📋 对比原有TODO清单...\n');
+            log('✅ 已实现的功能:');
+            log('  - 模块化架构 (替代单文件多if判断)');
+            log('  - OSM, XYZ, Vector, TileDebug, StadiaMaps, TileWMS, ImageStatic, IIIF');
+            log('  - Cluster, GeoTIFF, VectorTile, WMTS, UTFGrid');
+            log('  - TileLayer, VectorLayer, ImageLayer, HeatmapLayer, GroupLayer');
+            log('  - ID/Name自动处理');
+            log('  - 函数序列化支持');
+            log('  - TypeScript类型安全');
+            log('');
+            log('🔄 待完善的功能 (原TODO):');
+            log('  - Weight函数序列化 (HeatmapLayer)');
+            log('  - 更多Source类型 (TileArcGISRest, TileJSON, Zoomify等)');
+            log('  - 动态样式处理');
+            log('  - WebGL图层支持');
+            log('');
+        };
+        
+        // 显示最终结果
+        function showFinalResults() {
+            const sourceTypes = getSupportedSourceTypes().length;
+            const layerTypes = getSupportedLayerTypes().length;
+            const successRate = totalTests > 0 ? ((passedTests / totalTests) * 100).toFixed(1) : 0;
+            
+            log(`\n🎉 完整架构测试总结:`);
+            log(`📡 Source序列化器: ${sourceTypes} 个`);
+            log(`🗂️ Layer序列化器: ${layerTypes} 个`);
+            log(`✅ 测试通过率: ${successRate}% (${passedTests}/${totalTests})`);
+            log(`\n🎯 重构成果:`);
+            log(`  ✅ 从单文件if判断 → 模块化架构`);
+            log(`  ✅ 从手动类型检查 → 自动类型注册`);
+            log(`  ✅ 从零散实现 → 统一基类架构`);
+            log(`  ✅ 从弱类型 → 强类型约束`);
+            log(`  ✅ 从难维护 → 易扩展结构`);
+            
+            // 显示总结卡片
+            document.getElementById('summary').style.display = 'block';
+            document.getElementById('final-source-count').textContent = sourceTypes;
+            document.getElementById('final-layer-count').textContent = layerTypes;
+            document.getElementById('success-rate').textContent = successRate + '%';
+        }
+        
+        // 清空输出
+        window.clearOutput = function() {
+            document.getElementById('output').textContent = '输出已清空...\n';
+            document.getElementById('summary').style.display = 'none';
+            testResults = [];
+            totalTests = 0;
+            passedTests = 0;
+        };
+        
+        // 辅助函数
+        function log(message) {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 完整架构测试页面启动');
+            setTimeout(() => {
+                showSupportedTypes();
+            }, 100);
+        });
+    </script>
+</body>
+</html>

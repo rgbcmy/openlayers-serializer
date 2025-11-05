@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简单验证测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f7;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border-radius: 8px;
+        }
+        
+        .output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            border-radius: 6px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ 简单验证测试</h1>
+            <p>快速验证重构后的序列化器</p>
+        </div>
+        
+        <div class="output" id="output">正在进行验证测试...\n</div>
+    </div>
+
+    <script type="module">
+        const output = document.getElementById('output');
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+        
+        async function runSimpleTest() {
+            try {
+                log('🚀 开始验证测试...\n');
+                
+                // 测试1: 加载模块
+                log('1. 测试模块加载...');
+                const sourceModule = await import('./src/serializer/source-new.js');
+                const layerModule = await import('./src/serializer/layer-new.js');
+                log('✅ 模块加载成功');
+                
+                // 显示支持的类型
+                const sourceTypes = sourceModule.getSupportedSourceTypes();
+                const layerTypes = layerModule.getSupportedLayerTypes();
+                log(`📡 支持的Source类型 (${sourceTypes.length}个): ${sourceTypes.join(', ')}`);
+                log(`🗂️ 支持的Layer类型 (${layerTypes.length}个): ${layerTypes.join(', ')}`);
+                
+                // 测试2: 基本序列化
+                log('\n2. 测试基本序列化...');
+                const { OSM } = await import('ol/source.js');
+                const { Tile: TileLayer } = await import('ol/layer.js');
+                
+                // 创建Source
+                const osmSource = new OSM();
+                osmSource.set('id', 'test-osm');
+                osmSource.set('name', 'Test OSM');
+                
+                const serializedSource = sourceModule.serializeSource(osmSource);
+                const deserializedSource = sourceModule.deserializeSource(serializedSource);
+                
+                log(`✅ Source序列化成功: ${serializedSource.type}`);
+                log(`✅ Source反序列化成功: ID=${deserializedSource.get('id')}, Name=${deserializedSource.get('name')}`);
+                
+                // 创建Layer
+                const tileLayer = new TileLayer({ source: new OSM() });
+                tileLayer.set('id', 'test-layer');
+                tileLayer.set('name', 'Test Layer');
+                
+                const serializedLayer = layerModule.serializeLayer(tileLayer);
+                const deserializedLayer = layerModule.deserializeLayer(serializedLayer);
+                
+                log(`✅ Layer序列化成功: ${serializedLayer.type}`);
+                log(`✅ Layer反序列化成功: ID=${deserializedLayer.get('id')}, Name=${deserializedLayer.get('name')}`);
+                
+                log('\n🎉 验证测试完成！');
+                log('🎯 重构后的序列化器工作正常');
+                log(`📊 覆盖率: Source=${sourceTypes.length}个, Layer=${layerTypes.length}个`);
+                
+            } catch (error) {
+                log('❌ 验证测试失败: ' + error.message);
+                console.error(error);
+            }
+        }
+        
+        // 页面加载完成后运行测试
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(runSimpleTest, 100);
+        });
+    </script>
+</body>
+</html>

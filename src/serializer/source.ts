@@ -108,6 +108,35 @@ export function serializeSource(source: Source): ISerializedSource {
     if (tileGrid) {
       tileGridDto = serializeTileGrid(tileGrid);
     }
+    
+    // 获取format值：优先从属性获取，否则从tileUrlFunction推断，最后使用默认值
+    let format = source.get('format');
+    if (!format) {
+      // 从tileUrlFunction的URL中推断format
+      try {
+        const tileUrlFunc = source.getTileUrlFunction();
+        if (tileUrlFunc) {
+          // 使用一个测试瓦片坐标来获取示例URL
+          const testUrl = tileUrlFunc([0, 0, 0], 1, null as any);
+          if (testUrl && typeof testUrl === 'string') {
+            // 从URL中提取文件扩展名作为format
+            // IIIF URL格式类似: .../full/256,/0/default.jpg
+            const match = testUrl.match(/\.([a-zA-Z]{2,4})(?:\?|$)/);
+            if (match) {
+              format = match[1];
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to infer IIIF format from tileUrlFunction:', error);
+      }
+      
+      // 使用默认值
+      if (!format) {
+        format = 'jpg';
+      }
+    }
+    
     return {
       id:id,
       name:name,
@@ -117,15 +146,12 @@ export function serializeSource(source: Source): ISerializedSource {
       cacheSize: undefined,
       crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'),// || 'anonymous',
       extent: source.getTileGrid()?.getExtent() as [number, number, number, number],
-      //todo
-      format: source.get('format') || 'jpg',
+      format: format,
       interpolate: source.getInterpolate() ?? true,
       projection: source.getProjection()?.getCode() ?? undefined,
-      //todo
       quality: source.get('quality') || 'default',
       reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
       resolutions: source.getTileGrid()?.getResolutions() || [],
-      //todo
       size: source.get('size') as any,// source.get('size') as Size | Size[] | undefined,
       sizes: tileGridDto?.sizes as any,// source.get('sizes') as Size[] | undefined,
       //todo
@@ -540,27 +566,114 @@ export function serializeSource(source: Source): ISerializedSource {
     }
   }
   if (source instanceof VectorSource) {
-
+    // 基于官方API进行全面序列化
+    const features = source.getFeatures();
+    const url = source.getUrl();
+    const format = source.getFormat();
+    
+    // 基础配置 - 根据官方API默认值设置
     let sourceDto: IVectorSource = {
-      id:id,
-      name:name,
+      id: id,
+      name: name,
       type: 'Vector',
       attributions: (source.getAttributions() as any) ?? null,
-      //todo
-      //features: new GeoJSON().writeFeaturesObject(source.getFeatures()),
-      //TODO
-      //features:undefined,
-      //TODO
-      //loader;undefined,
-      format: serializeFormat(source.getFormat()),
-      overlaps: source.getOverlaps() ?? true,
+      format: serializeFormat(format),
+      overlaps: source.getOverlaps() ?? true, // 官方默认true
       strategy: getBuiltInStrategyName(source['strategy_'] ?? all),
-      url: source.getUrl()?.toString() ?? undefined,
-      useSpatialIndex: source['featuresRtree_'] ? true : false,
-      wrapX: source.getWrapX()
-      //loader:undefined
+      useSpatialIndex: source['featuresRtree_'] ? true : false, // 官方默认true
+      wrapX: source.getWrapX() ?? true // 官方默认true
     };
-    return sourceDto
+
+    // URL处理 - 支持string和FeatureUrlFunction
+    if (url) {
+      if (typeof url === 'string') {
+        sourceDto.url = url;
+      } else if (typeof url === 'function') {
+        // FeatureUrlFunction - 序列化函数
+        try {
+          sourceDto.loader = serializeFunctionForDto(url as Function);
+        } catch (error) {
+          console.warn('Failed to serialize FeatureUrlFunction:', error);
+        }
+      }
+      
+      // 备份策略：如果有URL且已加载数据，保存少量features作为备份
+      if (features.length > 0 && features.length <= 100) {
+        try {
+          if (format instanceof GeoJSON) {
+            sourceDto.features = format.writeFeaturesObject(features);
+          } else if (format && typeof format.writeFeatures === 'function') {
+            // 其他format类型，先转换为字符串再解析为对象
+            const featuresString = format.writeFeatures(features);
+            if (typeof featuresString === 'string') {
+              try {
+                sourceDto.features = JSON.parse(featuresString);
+              } catch {
+                // 如果解析失败，直接存储字符串
+                sourceDto.features = featuresString as any;
+              }
+            } else {
+              // ArrayBuffer 或其他类型，使用GeoJSON后备
+              sourceDto.features = new GeoJSON().writeFeaturesObject(features);
+            }
+          } else {
+            // 使用GeoJSON作为后备格式
+            sourceDto.features = new GeoJSON().writeFeaturesObject(features);
+          }
+        } catch (error) {
+          console.warn('Failed to serialize features as backup:', error);
+        }
+      }
+    }
+    // Features处理 - 当没有URL时，序列化所有features
+    else if (features.length > 0) {
+      try {
+        if (format instanceof GeoJSON) {
+          sourceDto.features = format.writeFeaturesObject(features);
+        } else if (format && typeof format.writeFeatures === 'function') {
+          // 其他format类型，先转换为字符串再尝试解析
+          const featuresString = format.writeFeatures(features);
+          if (typeof featuresString === 'string') {
+            try {
+              sourceDto.features = JSON.parse(featuresString);
+              // 保持原始format不变
+            } catch {
+              // 如果解析失败，使用GeoJSON后备但保持format标记
+              sourceDto.features = new GeoJSON().writeFeaturesObject(features);
+              console.warn(`Failed to parse ${sourceDto.format} features, using GeoJSON fallback`);
+            }
+          } else {
+            // ArrayBuffer 或其他类型，使用GeoJSON后备但保持format标记
+            sourceDto.features = new GeoJSON().writeFeaturesObject(features);
+            console.warn(`${sourceDto.format} format returned non-string data, using GeoJSON fallback`);
+          }
+        } else {
+          // 使用GeoJSON作为默认格式
+          sourceDto.features = new GeoJSON().writeFeaturesObject(features);
+          sourceDto.format = 'GeoJSON';
+        }
+      } catch (error) {
+        console.warn('Failed to serialize features:', error);
+        sourceDto.features = undefined;
+      }
+    }
+
+    // Custom Loader处理
+    // 注意：官方文档说如果设置了url但没有loader，会自动创建XHR loader
+    // 我们只序列化明确设置的自定义loader
+    const hasCustomLoader = source['loader_'] && 
+                           typeof source['loader_'] === 'function' && 
+                           !url; // 如果有url，loader通常是内置的XHR loader
+    
+    if (hasCustomLoader) {
+      try {
+        sourceDto.loader = serializeFunctionForDto(source['loader_']);
+      } catch (error) {
+        console.warn('Failed to serialize custom loader:', error);
+      }
+    }
+
+    return sourceDto;
   }
   if (source instanceof VectorTile) {
     let tileGrid = source.getTileGrid();
@@ -1014,26 +1127,71 @@ export function deserializeSource(data: ISerializedSource): any {
       break;
     case 'Vector':
       let vectorSourceDto = data as IVectorSource;
-      let format
-      if (vectorSourceDto.format) {
-        format = deserializeFormat(vectorSourceDto.format as FormatName);
-      }
-
-      source= new VectorSource({
+      let format = vectorSourceDto.format ? deserializeFormat(vectorSourceDto.format as FormatName) : new GeoJSON();
+      
+      // 准备构造参数 - 基于官方API默认值
+      let vectorOptions: any = {
         attributions: vectorSourceDto.attributions as AttributionLike,
         format: format,
-        //TODO
-        //features:undefined,
-        //TODO
-        //loader;undefined,
-        overlaps: vectorSourceDto.overlaps ?? true,
+        overlaps: vectorSourceDto.overlaps ?? true, // 官方默认true
         strategy: (getBuiltInStrategyByName(vectorSourceDto.strategy as BuiltInStrategyName) as any),
-        url: vectorSourceDto.url ?? undefined,
-        useSpatialIndex: vectorSourceDto.useSpatialIndex ?? true,
-        wrapX: vectorSourceDto.wrapX ?? true
-        //features: new GeoJSON().readFeatures(data.features),
-        //loader
-      });
+        useSpatialIndex: vectorSourceDto.useSpatialIndex ?? true, // 官方默认true
+        wrapX: vectorSourceDto.wrapX ?? true // 官方默认true
+      };
+
+      // URL处理 - 支持string URL
+      if (vectorSourceDto.url) {
+        vectorOptions.url = vectorSourceDto.url;
+        // 注意：当设置url时，format是必需的（根据官方文档）
+        if (!vectorOptions.format) {
+          vectorOptions.format = new GeoJSON(); // 默认format
+        }
+      }
+
+      // Custom Loader处理
+      if (vectorSourceDto.loader) {
+        try {
+          const customLoader = deserializeFunctionFromDto(vectorSourceDto.loader);
+          if (typeof customLoader === 'function') {
+            vectorOptions.loader = customLoader;
+          }
+        } catch (error) {
+          console.warn('Failed to deserialize custom loader:', error);
+        }
+      }
+
+      // 创建VectorSource实例
+      source = new VectorSource(vectorOptions);
+
+      // Features处理 - 在source创建后添加features
+      if (vectorSourceDto.features) {
+        try {
+          let features;
+          
+          // 根据features数据类型进行不同处理
+          if (typeof vectorSourceDto.features === 'string') {
+            // 字符串格式，使用format读取
+            features = format.readFeatures(vectorSourceDto.features);
+          } else if (typeof vectorSourceDto.features === 'object') {
+            // 对象格式（通常是GeoJSON FeatureCollection）
+            if (format instanceof GeoJSON) {
+              features = format.readFeatures(vectorSourceDto.features);
+            } else {
+              // 非GeoJSON format，尝试用GeoJSON读取
+              features = new GeoJSON().readFeatures(vectorSourceDto.features);
+            }
+          } else {
+            console.warn('Unknown features format:', typeof vectorSourceDto.features);
+          }
+          
+          if (features && features.length > 0) {
+            (source as VectorSource).addFeatures(features);
+          }
+        } catch (error) {
+          console.warn('Failed to deserialize features:', error);
+        }
+      }
+      
       break;
     case 'VectorTile':
       let vectorTileDto = data as IVectorTile;

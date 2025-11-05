@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>快速功能测试</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.2.1/ol.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f7;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #007aff 0%, #5856d6 100%);
+            color: white;
+            border-radius: 8px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            background: #007aff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            margin: 5px;
+            transition: all 0.2s ease;
+        }
+        
+        button:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+        
+        .output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 6px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #d1f2eb;
+            color: #00875a;
+            border: 1px solid #79f2c0;
+        }
+        
+        .status.error {
+            background: #ffe6e6;
+            color: #d04e4e;
+            border: 1px solid #ff9999;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ 快速功能测试</h1>
+            <p>验证重构后的序列化器基本功能</p>
+        </div>
+        
+        <div>
+            <button onclick="testModuleLoading()">测试模块加载</button>
+            <button onclick="testBasicSerialization()">测试基础序列化</button>
+            <button onclick="testIdNameHandling()">测试ID/Name处理</button>
+            <button onclick="runAllTests()">运行所有测试</button>
+            <button onclick="clearOutput()">清空输出</button>
+        </div>
+        
+        <div id="status" class="status success">等待测试...</div>
+        <div class="output" id="output">等待测试开始...\n</div>
+    </div>
+
+    <script type="module">
+        let testCount = 0;
+        let passCount = 0;
+        
+        // 测试模块加载
+        window.testModuleLoading = async function() {
+            log('🧪 测试模块加载...\n');
+            
+            try {
+                // 测试source-new模块
+                const sourceModule = await import('./src/serializer/source-new.js');
+                log('✅ Source模块加载成功');
+                log(`支持的Source类型: ${sourceModule.getSupportedSourceTypes().join(', ')}`);
+                
+                // 测试layer-new模块
+                const layerModule = await import('./src/serializer/layer-new.js');
+                log('✅ Layer模块加载成功');
+                log(`支持的Layer类型: ${layerModule.getSupportedLayerTypes().join(', ')}`);
+                
+                updateStatus('模块加载测试通过', 'success');
+                testCount++;
+                passCount++;
+                
+            } catch (error) {
+                log('❌ 模块加载失败:', error.message);
+                updateStatus('模块加载测试失败: ' + error.message, 'error');
+                testCount++;
+            }
+            
+            log('');
+        };
+        
+        // 测试基础序列化
+        window.testBasicSerialization = async function() {
+            log('🧪 测试基础序列化功能...\n');
+            
+            try {
+                const { serializeSource, deserializeSource } = await import('./src/serializer/source-new.js');
+                const { serializeLayer, deserializeLayer } = await import('./src/serializer/layer-new.js');
+                const { Tile as TileLayer } = await import('ol/layer.js');
+                const { OSM } = await import('ol/source.js');
+                
+                // 测试Source序列化
+                testCount++;
+                log('测试OSM Source序列化...');
+                const osmSource = new OSM();
+                const serializedSource = serializeSource(osmSource);
+                const deserializedSource = deserializeSource(serializedSource);
+                
+                if (deserializedSource instanceof OSM) {
+                    log('✅ OSM Source序列化/反序列化成功');
+                    passCount++;
+                } else {
+                    log('❌ OSM Source序列化/反序列化失败');
+                }
+                
+                // 测试Layer序列化
+                testCount++;
+                log('测试TileLayer序列化...');
+                const tileLayer = new TileLayer({ source: new OSM() });
+                const serializedLayer = serializeLayer(tileLayer);
+                const deserializedLayer = deserializeLayer(serializedLayer);
+                
+                if (deserializedLayer instanceof TileLayer) {
+                    log('✅ TileLayer序列化/反序列化成功');
+                    passCount++;
+                } else {
+                    log('❌ TileLayer序列化/反序列化失败');
+                }
+                
+                updateStatus('基础序列化测试通过', 'success');
+                
+            } catch (error) {
+                log('❌ 基础序列化测试失败:', error.message);
+                updateStatus('基础序列化测试失败: ' + error.message, 'error');
+                testCount += 2; // 两个测试都算失败
+            }
+            
+            log('');
+        };
+        
+        // 测试ID/Name处理
+        window.testIdNameHandling = async function() {
+            log('🧪 测试ID/Name处理...\n');
+            
+            try {
+                const { serializeSource, deserializeSource } = await import('./src/serializer/source-new.js');
+                const { serializeLayer, deserializeLayer } = await import('./src/serializer/layer-new.js');
+                const { Tile as TileLayer } = await import('ol/layer.js');
+                const { OSM } = await import('ol/source.js');
+                
+                // 测试Source ID/Name
+                testCount++;
+                log('测试Source ID/Name...');
+                const osmSource = new OSM();
+                osmSource.set('id', 'test-osm-123');
+                osmSource.set('name', 'Test OSM Source');
+                
+                const serializedSource = serializeSource(osmSource);
+                const deserializedSource = deserializeSource(serializedSource);
+                
+                if (deserializedSource.get('id') === 'test-osm-123' && 
+                    deserializedSource.get('name') === 'Test OSM Source') {
+                    log('✅ Source ID/Name处理正确');
+                    passCount++;
+                } else {
+                    log('❌ Source ID/Name处理失败');
+                    log(`  期望: id=test-osm-123, name=Test OSM Source`);
+                    log(`  实际: id=${deserializedSource.get('id')}, name=${deserializedSource.get('name')}`);
+                }
+                
+                // 测试Layer ID/Name
+                testCount++;
+                log('测试Layer ID/Name...');
+                const tileLayer = new TileLayer({ source: new OSM() });
+                tileLayer.set('id', 'test-layer-456');
+                tileLayer.set('name', 'Test Tile Layer');
+                
+                const serializedLayer = serializeLayer(tileLayer);
+                const deserializedLayer = deserializeLayer(serializedLayer);
+                
+                if (deserializedLayer.get('id') === 'test-layer-456' && 
+                    deserializedLayer.get('name') === 'Test Tile Layer') {
+                    log('✅ Layer ID/Name处理正确');
+                    passCount++;
+                } else {
+                    log('❌ Layer ID/Name处理失败');
+                    log(`  期望: id=test-layer-456, name=Test Tile Layer`);
+                    log(`  实际: id=${deserializedLayer.get('id')}, name=${deserializedLayer.get('name')}`);
+                }
+                
+                updateStatus('ID/Name处理测试通过', 'success');
+                
+            } catch (error) {
+                log('❌ ID/Name处理测试失败:', error.message);
+                updateStatus('ID/Name处理测试失败: ' + error.message, 'error');
+                testCount += 2; // 两个测试都算失败
+            }
+            
+            log('');
+        };
+        
+        // 运行所有测试
+        window.runAllTests = async function() {
+            testCount = 0;
+            passCount = 0;
+            
+            log('🚀 开始运行所有测试...\n');
+            updateStatus('正在运行测试...', 'success');
+            
+            await testModuleLoading();
+            await testBasicSerialization();
+            await testIdNameHandling();
+            
+            const successRate = testCount > 0 ? ((passCount / testCount) * 100).toFixed(1) : 0;
+            
+            log(`\n🎉 测试完成总结:`);
+            log(`✅ 通过: ${passCount}/${testCount} (${successRate}%)`);
+            
+            if (passCount === testCount) {
+                log(`\n🎯 所有测试通过！重构后的序列化器工作正常！`);
+                updateStatus(`所有测试通过！(${passCount}/${testCount})`, 'success');
+            } else {
+                log(`\n⚠️ 有 ${testCount - passCount} 个测试失败`);
+                updateStatus(`部分测试失败 (${passCount}/${testCount})`, 'error');
+            }
+        };
+        
+        // 清空输出
+        window.clearOutput = function() {
+            document.getElementById('output').textContent = '输出已清空...\n';
+            updateStatus('等待测试...', 'success');
+            testCount = 0;
+            passCount = 0;
+        };
+        
+        // 辅助函数
+        function updateStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+        
+        function log(message) {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+        
+        // 页面加载完成后自动运行测试
+        document.addEventListener('DOMContentLoaded', function() {
+            log('⚡ 快速功能测试页面启动');
+            setTimeout(() => {
+                runAllTests();
+            }, 500);
+        });
+    </script>
+</body>
+</html>

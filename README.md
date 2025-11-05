@@ -195,13 +195,37 @@ Safely deserialize functions with validation.
 
 ### Supported Objects
 
-| Category     | Supported Types                     |
-| ------------ | ----------------------------------- |
-| **Map**      | `ol/Map`                            |
-| **View**     | `ol/View`                           |
-| **Layers**   | `ol/layer/Tile`, `ol/layer/Vector`  |
-| **Sources**  | `ol/source/OSM`, `ol/source/Vector` |
-| **Features** | `ol/Feature` (with geometry)        |
+| Category     | Supported Types                     | Count |
+| ------------ | ----------------------------------- | ----- |
+| **Map**      | `ol/Map`                            | 1 |
+| **View**     | `ol/View`                           | 1 |
+| **Layers**   | `Tile`, `Vector`, `Image`, `Heatmap`, `Group` (recursive) | **5** |
+| **Sources**  | `OSM`, `XYZ`, `BingMaps`, `StadiaMaps`, `Vector`, `TileWMS`, `ImageStatic`, `Cluster`, `IIIF`, `GeoTIFF`, `VectorTile`, `WMTS`, `UTFGrid`, `TileDebug` | **14** |
+| **Features** | `ol/Feature` (with geometry)        | 1 |
+| **Styles**   | `Style`, `Fill`, `Stroke`, `Circle`, `Icon`, `Text` | 6+ |
+
+#### Layer Details
+- ✅ **TileLayer** - Raster tile layers
+- ✅ **VectorLayer** - Vector feature layers with style support
+- ✅ **ImageLayer** - Static and dynamic image layers
+- ✅ **HeatmapLayer** - Heatmap visualization with gradients
+- ✅ **GroupLayer** - Hierarchical layer groups with recursive serialization
+
+#### Source Details
+- ✅ **OSM** - OpenStreetMap tiles
+- ✅ **XYZ** - Generic XYZ tile sources
+- ✅ **BingMaps** - Bing Maps aerial/road tiles
+- ✅ **StadiaMaps** - Stadia Maps (formerly Stamen) 
+- ✅ **Vector** - GeoJSON and other vector formats
+- ✅ **TileWMS** - OGC WMS tile service
+- ✅ **ImageStatic** - Static georeferenced images
+- ✅ **Cluster** - Point clustering with configurable distance
+- ✅ **IIIF** - International Image Interoperability Framework
+- ✅ **GeoTIFF** - Cloud Optimized GeoTIFF
+- ✅ **VectorTile** - Mapbox Vector Tiles (MVT)
+- ✅ **WMTS** - OGC Web Map Tile Service
+- ✅ **UTFGrid** - Interactive UTF grid layers
+- ✅ **TileDebug** - Debug tile boundaries
 
 ---
 

@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ID和Name序列化测试</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.2.1/ol.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f7;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border-radius: 8px;
+        }
+        
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #007aff;
+        }
+        
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            background: #007aff;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        button:hover {
+            background: #0056b3;
+            transform: translateY(-1px);
+        }
+        
+        button.success {
+            background: #28a745;
+        }
+        
+        .output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+            font-size: 13px;
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 6px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+        }
+        
+        .success-text {
+            color: #28a745;
+            font-weight: bold;
+        }
+        
+        .error-text {
+            color: #dc3545;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 ID和Name序列化测试</h1>
+            <p>验证Source和Layer的id和name属性是否正确序列化</p>
+        </div>
+        
+        <div class="test-section">
+            <h3>📡 Source ID/Name 测试</h3>
+            <div class="test-buttons">
+                <button onclick="testSourceIdName()">测试Source ID/Name</button>
+                <button onclick="testAutoIdGeneration()">测试自动ID生成</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🗂️ Layer ID/Name 测试</h3>
+            <div class="test-buttons">
+                <button onclick="testLayerIdName()">测试Layer ID/Name</button>
+                <button onclick="testNestedIdName()">测试嵌套ID/Name</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🧪 完整ID/Name测试</h3>
+            <div class="test-buttons">
+                <button onclick="runAllIdNameTests()" class="success">运行所有测试</button>
+                <button onclick="clearOutput()">清空输出</button>
+            </div>
+        </div>
+        
+        <div class="output" id="output">等待测试开始...\n</div>
+    </div>
+
+    <script type="module">
+        import { Tile as TileLayer, Vector as VectorLayer } from 'ol/layer.js';
+        import { OSM, XYZ, Vector as VectorSource } from 'ol/source.js';
+        import { Point } from 'ol/geom.js';
+        import { Feature } from 'ol';
+        
+        // 导入新的序列化功能
+        import { serializeSource, deserializeSource } from './src/serializer/source-new.js';
+        import { serializeLayer, deserializeLayer } from './src/serializer/layer-new.js';
+        
+        let testCount = 0;
+        let passCount = 0;
+        
+        // 测试Source的ID和Name
+        window.testSourceIdName = function() {
+            log('🧪 开始测试Source ID/Name序列化...\n');
+            
+            // 测试1: OSM Source with custom id and name
+            try {
+                testCount++;
+                log('测试1: OSM Source 自定义ID和Name');
+                
+                const osmSource = new OSM();
+                osmSource.set('id', 'test-osm-123');
+                osmSource.set('name', 'My Custom OSM');
+                
+                log(`  原始: id="${osmSource.get('id')}", name="${osmSource.get('name')}"`);
+                
+                const serialized = serializeSource(osmSource);
+                log(`  序列化: id="${serialized.id}", name="${serialized.name}"`);
+                
+                const deserialized = deserializeSource(serialized);
+                log(`  反序列化: id="${deserialized.get('id')}", name="${deserialized.get('name')}"`);
+                
+                if (deserialized.get('id') === 'test-osm-123' && deserialized.get('name') === 'My Custom OSM') {
+                    log('  ✅ OSM Source ID/Name测试通过\n');
+                    passCount++;
+                } else {
+                    log('  ❌ OSM Source ID/Name测试失败\n');
+                }
+            } catch (error) {
+                log(`  ❌ OSM Source测试异常: ${error.message}\n`);
+            }
+            
+            // 测试2: XYZ Source with custom id and name
+            try {
+                testCount++;
+                log('测试2: XYZ Source 自定义ID和Name');
+                
+                const xyzSource = new XYZ({
+                    url: 'https://example.com/{z}/{x}/{y}.png'
+                });
+                xyzSource.set('id', 'my-xyz-source');
+                xyzSource.set('name', 'Custom XYZ Tiles');
+                
+                log(`  原始: id="${xyzSource.get('id')}", name="${xyzSource.get('name')}"`);
+                
+                const serialized = serializeSource(xyzSource);
+                log(`  序列化: id="${serialized.id}", name="${serialized.name}"`);
+                
+                const deserialized = deserializeSource(serialized);
+                log(`  反序列化: id="${deserialized.get('id')}", name="${deserialized.get('name')}"`);
+                
+                if (deserialized.get('id') === 'my-xyz-source' && deserialized.get('name') === 'Custom XYZ Tiles') {
+                    log('  ✅ XYZ Source ID/Name测试通过\n');
+                    passCount++;
+                } else {
+                    log('  ❌ XYZ Source ID/Name测试失败\n');
+                }
+            } catch (error) {
+                log(`  ❌ XYZ Source测试异常: ${error.message}\n`);
+            }
+            
+            log(`Source ID/Name测试完成: ${passCount}/${testCount} 通过\n`);
+        };
+        
+        // 测试自动ID生成
+        window.testAutoIdGeneration = function() {
+            log('🧪 开始测试自动ID生成...\n');
+            
+            try {
+                testCount++;
+                log('测试: 没有设置ID的Source自动生成UUID');
+                
+                const osmSource = new OSM();
+                // 不设置id和name
+                
+                log(`  原始: id="${osmSource.get('id') || 'undefined'}", name="${osmSource.get('name') || 'undefined'}"`);
+                
+                const serialized = serializeSource(osmSource);
+                log(`  序列化: id="${serialized.id}", name="${serialized.name}"`);
+                
+                const deserialized = deserializeSource(serialized);
+                log(`  反序列化: id="${deserialized.get('id')}", name="${deserialized.get('name')}"`);
+                
+                // 检查是否生成了UUID格式的ID
+                const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+                const hasValidId = uuidRegex.test(deserialized.get('id'));
+                const hasDefaultName = deserialized.get('name') === 'Untitled';
+                
+                if (hasValidId && hasDefaultName) {
+                    log('  ✅ 自动ID生成测试通过\n');
+                    passCount++;
+                } else {
+                    log('  ❌ 自动ID生成测试失败\n');
+                }
+                
+            } catch (error) {
+                log(`  ❌ 自动ID生成测试异常: ${error.message}\n`);
+            }
+        };
+        
+        // 测试Layer的ID和Name
+        window.testLayerIdName = function() {
+            log('🧪 开始测试Layer ID/Name序列化...\n');
+            
+            // 测试1: TileLayer with custom id and name
+            try {
+                testCount++;
+                log('测试1: TileLayer 自定义ID和Name');
+                
+                const tileLayer = new TileLayer({
+                    source: new OSM()
+                });
+                tileLayer.set('id', 'my-tile-layer');
+                tileLayer.set('name', 'My Tile Layer');
+                
+                log(`  原始: id="${tileLayer.get('id')}", name="${tileLayer.get('name')}"`);
+                
+                const serialized = serializeLayer(tileLayer);
+                log(`  序列化: id="${serialized.id}", name="${serialized.name}"`);
+                
+                const deserialized = deserializeLayer(serialized);
+                log(`  反序列化: id="${deserialized.get('id')}", name="${deserialized.get('name')}"`);
+                
+                if (deserialized.get('id') === 'my-tile-layer' && deserialized.get('name') === 'My Tile Layer') {
+                    log('  ✅ TileLayer ID/Name测试通过\n');
+                    passCount++;
+                } else {
+                    log('  ❌ TileLayer ID/Name测试失败\n');
+                }
+            } catch (error) {
+                log(`  ❌ TileLayer测试异常: ${error.message}\n`);
+            }
+            
+            // 测试2: VectorLayer with custom id and name
+            try {
+                testCount++;
+                log('测试2: VectorLayer 自定义ID和Name');
+                
+                const vectorLayer = new VectorLayer({
+                    source: new VectorSource({
+                        features: [new Feature({ geometry: new Point([0, 0]) })]
+                    })
+                });
+                vectorLayer.set('id', 'my-vector-layer');
+                vectorLayer.set('name', 'My Vector Layer');
+                
+                log(`  原始: id="${vectorLayer.get('id')}", name="${vectorLayer.get('name')}"`);
+                
+                const serialized = serializeLayer(vectorLayer);
+                log(`  序列化: id="${serialized.id}", name="${serialized.name}"`);
+                
+                const deserialized = deserializeLayer(serialized);
+                log(`  反序列化: id="${deserialized.get('id')}", name="${deserialized.get('name')}"`);
+                
+                if (deserialized.get('id') === 'my-vector-layer' && deserialized.get('name') === 'My Vector Layer') {
+                    log('  ✅ VectorLayer ID/Name测试通过\n');
+                    passCount++;
+                } else {
+                    log('  ❌ VectorLayer ID/Name测试失败\n');
+                }
+            } catch (error) {
+                log(`  ❌ VectorLayer测试异常: ${error.message}\n`);
+            }
+        };
+        
+        // 测试嵌套ID/Name（Layer和它的Source都有ID/Name）
+        window.testNestedIdName = function() {
+            log('🧪 开始测试嵌套ID/Name序列化...\n');
+            
+            try {
+                testCount++;
+                log('测试: Layer和Source都有自定义ID/Name');
+                
+                // 创建有ID和Name的Source
+                const source = new OSM();
+                source.set('id', 'nested-osm-source');
+                source.set('name', 'Nested OSM Source');
+                
+                // 创建有ID和Name的Layer
+                const layer = new TileLayer({ source });
+                layer.set('id', 'nested-tile-layer');
+                layer.set('name', 'Nested Tile Layer');
+                
+                log(`  原始Layer: id="${layer.get('id')}", name="${layer.get('name')}"`);
+                log(`  原始Source: id="${source.get('id')}", name="${source.get('name')}"`);
+                
+                const serialized = serializeLayer(layer);
+                log(`  序列化Layer: id="${serialized.id}", name="${serialized.name}"`);
+                log(`  序列化Source: id="${serialized.source.id}", name="${serialized.source.name}"`);
+                
+                const deserialized = deserializeLayer(serialized);
+                const deserializedSource = deserialized.getSource();
+                
+                log(`  反序列化Layer: id="${deserialized.get('id')}", name="${deserialized.get('name')}"`);
+                log(`  反序列化Source: id="${deserializedSource.get('id')}", name="${deserializedSource.get('name')}"`);
+                
+                const layerCorrect = deserialized.get('id') === 'nested-tile-layer' && deserialized.get('name') === 'Nested Tile Layer';
+                const sourceCorrect = deserializedSource.get('id') === 'nested-osm-source' && deserializedSource.get('name') === 'Nested OSM Source';
+                
+                if (layerCorrect && sourceCorrect) {
+                    log('  ✅ 嵌套ID/Name测试通过\n');
+                    passCount++;
+                } else {
+                    log('  ❌ 嵌套ID/Name测试失败\n');
+                }
+                
+            } catch (error) {
+                log(`  ❌ 嵌套ID/Name测试异常: ${error.message}\n`);
+            }
+        };
+        
+        // 运行所有测试
+        window.runAllIdNameTests = function() {
+            testCount = 0;
+            passCount = 0;
+            
+            log('🚀 开始运行所有ID/Name测试...\n');
+            
+            testSourceIdName();
+            setTimeout(() => {
+                testAutoIdGeneration();
+                setTimeout(() => {
+                    testLayerIdName();
+                    setTimeout(() => {
+                        testNestedIdName();
+                        setTimeout(() => {
+                            showFinalResults();
+                        }, 300);
+                    }, 300);
+                }, 300);
+            }, 300);
+        };
+        
+        // 显示最终结果
+        function showFinalResults() {
+            const successRate = testCount > 0 ? ((passCount / testCount) * 100).toFixed(1) : 0;
+            
+            log(`\n🎉 ID/Name序列化测试总结:`);
+            log(`✅ 测试通过: ${passCount}/${testCount} (${successRate}%)`);
+            
+            if (passCount === testCount) {
+                log(`\n🎯 所有ID/Name测试通过！`);
+                log(`  ✅ Source和Layer都正确保存和恢复id/name属性`);
+                log(`  ✅ 自动UUID生成功能正常`);
+                log(`  ✅ 嵌套结构的ID/Name正确处理`);
+                log(`  ✅ 重构后的序列化器架构工作完美`);
+            } else {
+                log(`\n⚠️ 有 ${testCount - passCount} 个测试失败，需要检查`);
+            }
+        }
+        
+        // 清空输出
+        window.clearOutput = function() {
+            document.getElementById('output').textContent = '输出已清空...\n';
+            testCount = 0;
+            passCount = 0;
+        };
+        
+        // 辅助函数
+        function log(message) {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 ID/Name序列化测试页面启动');
+            log('✨ 测试新的模块化序列化器中的ID/Name功能');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IIIF Format Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        .result { background: #f9f9f9; padding: 10px; margin: 10px 0; }
+        .success { background: #e8f5e8; }
+        .error { background: #ffe8e8; }
+    </style>
+</head>
+<body>
+    <h1>IIIF Format Detection Test</h1>
+    
+    <div class="test-section">
+        <h2>Test 1: IIIF with JPG format</h2>
+        <div id="test1-result" class="result">Testing...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 2: IIIF with PNG format</h2>
+        <div id="test2-result" class="result">Testing...</div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Test 3: IIIF with explicit format property</h2>
+        <div id="test3-result" class="result">Testing...</div>
+    </div>
+
+    <script type="module">
+        import { IIIF } from 'ol/source.js';
+        import { serializeSource } from './dist/openlayers-serializer.es.js';
+
+        function runTest(testId, testName, testFn) {
+            const resultDiv = document.getElementById(testId + '-result');
+            try {
+                const result = testFn();
+                resultDiv.innerHTML = `<strong>✓ ${testName}</strong><br>Result: ${JSON.stringify(result, null, 2)}`;
+                resultDiv.className = 'result success';
+            } catch (error) {
+                resultDiv.innerHTML = `<strong>✗ ${testName}</strong><br>Error: ${error.message}`;
+                resultDiv.className = 'result error';
+            }
+        }
+
+        // Test 1: IIIF with JPG format (default)
+        runTest('test1', 'IIIF JPG Format Detection', () => {
+            const iiifSource = new IIIF({
+                size: [2000, 1500],
+                url: 'https://example.com/iiif/image',
+                format: 'jpg' // 明确设置
+            });
+            
+            const serialized = serializeSource(iiifSource);
+            return { format: serialized.format };
+        });
+
+        // Test 2: IIIF with PNG format
+        runTest('test2', 'IIIF PNG Format Detection', () => {
+            const iiifSource = new IIIF({
+                size: [2000, 1500],
+                url: 'https://example.com/iiif/image',
+                format: 'png' // 明确设置PNG
+            });
+            
+            const serialized = serializeSource(iiifSource);
+            return { format: serialized.format };
+        });
+
+        // Test 3: IIIF without explicit format (should use tileUrlFunction detection)
+        runTest('test3', 'IIIF Format from tileUrlFunction', () => {
+            const iiifSource = new IIIF({
+                size: [2000, 1500],
+                url: 'https://example.com/iiif/image'
+                // 不设置format，让它从tileUrlFunction推断
+            });
+            
+            const serialized = serializeSource(iiifSource);
+            
+            // 测试tileUrlFunction是否能生成正确的URL
+            const tileUrlFunc = iiifSource.getTileUrlFunction();
+            const testUrl = tileUrlFunc ? tileUrlFunc([0, 0, 0], 1, null) : 'No URL function';
+            
+            return { 
+                format: serialized.format,
+                testUrl: testUrl 
+            };
+        });
+    </script>
+</body>
+</html>

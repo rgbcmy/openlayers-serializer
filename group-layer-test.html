@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GroupLayer递归测试</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ol@10.2.1/ol.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f7;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+            color: white;
+            border-radius: 8px;
+        }
+        
+        .test-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #ff6b6b;
+        }
+        
+        .test-buttons {
+            display: flex;
+            gap: 10px;
+            margin: 15px 0;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            background: #ff6b6b;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+        
+        button:hover {
+            background: #ee5a24;
+            transform: translateY(-1px);
+        }
+        
+        button.success {
+            background: #00b894;
+        }
+        
+        button.info {
+            background: #0984e3;
+        }
+        
+        .output {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            border-radius: 6px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+        }
+        
+        .layer-tree {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 6px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'SF Mono', 'Monaco', monospace;
+            font-size: 13px;
+        }
+        
+        .layer-item {
+            margin: 5px 0;
+            padding: 5px;
+            background: white;
+            border-radius: 4px;
+            border-left: 3px solid #0984e3;
+        }
+        
+        .layer-group {
+            border-left: 3px solid #e17055;
+            background: #ffeaa7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌳 GroupLayer递归测试</h1>
+            <p>验证GroupLayer的递归序列化和子图层管理</p>
+        </div>
+        
+        <div class="test-section">
+            <h3>🧪 递归序列化测试</h3>
+            <div class="test-buttons">
+                <button onclick="testSimpleGroup()">简单GroupLayer</button>
+                <button onclick="testNestedGroup()">嵌套GroupLayer</button>
+                <button onclick="testComplexGroup()">复杂层次结构</button>
+                <button onclick="testMixedLayers()" class="info">混合图层类型</button>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3>🔄 完整测试流程</h3>
+            <div class="test-buttons">
+                <button onclick="runAllGroupTests()" class="success">运行所有测试</button>
+                <button onclick="showLayerStructure()" class="info">显示图层结构</button>
+                <button onclick="clearOutput()">清空输出</button>
+            </div>
+        </div>
+        
+        <div id="layer-structure" class="layer-tree" style="display: none;">
+            <h4>📊 图层结构预览</h4>
+            <div id="structure-content"></div>
+        </div>
+        
+        <div class="output" id="output">等待测试开始...\n</div>
+    </div>
+
+    <script type="module">
+        import { Group as LayerGroup, Tile as TileLayer, Vector as VectorLayer } from 'ol/layer.js';
+        import { OSM, Vector as VectorSource } from 'ol/source.js';
+        import { Point } from 'ol/geom.js';
+        import { Feature } from 'ol';
+        
+        // 导入新的序列化功能
+        import { serializeLayer, deserializeLayer } from './src/serializer/layer-new.js';
+        
+        let testCount = 0;
+        let passCount = 0;
+        let currentGroupStructure = null;
+        
+        // 测试简单GroupLayer
+        window.testSimpleGroup = function() {
+            log('🧪 测试简单GroupLayer...\n');
+            
+            try {
+                testCount++;
+                
+                // 创建简单的GroupLayer
+                const tileLayer = new TileLayer({
+                    source: new OSM()
+                });
+                tileLayer.set('id', 'tile-layer-1');
+                tileLayer.set('name', 'OSM Base Layer');
+                
+                const vectorLayer = new VectorLayer({
+                    source: new VectorSource({
+                        features: [new Feature({ geometry: new Point([0, 0]) })]
+                    })
+                });
+                vectorLayer.set('id', 'vector-layer-1');
+                vectorLayer.set('name', 'Point Layer');
+                
+                const groupLayer = new LayerGroup({
+                    layers: [tileLayer, vectorLayer]
+                });
+                groupLayer.set('id', 'simple-group');
+                groupLayer.set('name', 'Simple Group');
+                
+                log('创建简单GroupLayer:');
+                log(`  - GroupLayer: ${groupLayer.get('name')} (ID: ${groupLayer.get('id')})`);
+                log(`  - 子图层数量: ${groupLayer.getLayers().getLength()}`);
+                
+                // 序列化
+                const serialized = serializeLayer(groupLayer);
+                log(`✅ 序列化成功，类型: ${serialized.type}`);
+                log(`📊 序列化的子图层数量: ${serialized.layers?.length || 0}`);
+                
+                // 反序列化
+                const deserialized = deserializeLayer(serialized);
+                log(`✅ 反序列化成功，类型: ${deserialized.constructor.name}`);
+                log(`📊 反序列化的子图层数量: ${deserialized.getLayers().getLength()}`);
+                
+                // 验证子图层
+                const childLayers = deserialized.getLayers();
+                let childrenCorrect = true;
+                childLayers.forEach((child, index) => {
+                    const originalChild = groupLayer.getLayers().item(index);
+                    const childMatches = child.get('id') === originalChild.get('id') && 
+                                       child.get('name') === originalChild.get('name');
+                    
+                    log(`  子图层 ${index + 1}: ${child.get('name')} (ID: ${child.get('id')}) - ${childMatches ? '✅' : '❌'}`);
+                    
+                    if (!childMatches) {
+                        childrenCorrect = false;
+                    }
+                });
+                
+                if (childrenCorrect && deserialized.getLayers().getLength() === 2) {
+                    log('✅ 简单GroupLayer测试通过\n');
+                    passCount++;
+                } else {
+                    log('❌ 简单GroupLayer测试失败\n');
+                }
+                
+            } catch (error) {
+                log(`❌ 简单GroupLayer测试异常: ${error.message}\n`);
+            }
+        };
+        
+        // 测试嵌套GroupLayer
+        window.testNestedGroup = function() {
+            log('🧪 测试嵌套GroupLayer...\n');
+            
+            try {
+                testCount++;
+                
+                // 创建内层组
+                const innerLayer1 = new TileLayer({ source: new OSM() });
+                innerLayer1.set('id', 'inner-tile');
+                innerLayer1.set('name', 'Inner Tile');
+                
+                const innerLayer2 = new VectorLayer({ 
+                    source: new VectorSource({ 
+                        features: [new Feature({ geometry: new Point([100, 100]) })]
+                    })
+                });
+                innerLayer2.set('id', 'inner-vector');
+                innerLayer2.set('name', 'Inner Vector');
+                
+                const innerGroup = new LayerGroup({
+                    layers: [innerLayer1, innerLayer2]
+                });
+                innerGroup.set('id', 'inner-group');
+                innerGroup.set('name', 'Inner Group');
+                
+                // 创建外层组
+                const outerLayer = new TileLayer({ source: new OSM() });
+                outerLayer.set('id', 'outer-tile');
+                outerLayer.set('name', 'Outer Tile');
+                
+                const outerGroup = new LayerGroup({
+                    layers: [outerLayer, innerGroup]
+                });
+                outerGroup.set('id', 'outer-group');
+                outerGroup.set('name', 'Outer Group');
+                
+                log('创建嵌套GroupLayer:');
+                log(`  - 外层组: ${outerGroup.get('name')} (子图层: ${outerGroup.getLayers().getLength()})`);
+                log(`  - 内层组: ${innerGroup.get('name')} (子图层: ${innerGroup.getLayers().getLength()})`);
+                
+                currentGroupStructure = outerGroup;
+                
+                // 序列化
+                const serialized = serializeLayer(outerGroup);
+                log(`✅ 序列化成功`);
+                log(`📊 外层子图层数量: ${serialized.layers?.length || 0}`);
+                
+                // 查找内层组的序列化数据
+                const innerGroupSerialized = serialized.layers?.find(l => l.type === 'Group');
+                if (innerGroupSerialized) {
+                    log(`📊 内层子图层数量: ${innerGroupSerialized.layers?.length || 0}`);
+                }
+                
+                // 反序列化
+                const deserialized = deserializeLayer(serialized);
+                log(`✅ 反序列化成功`);
+                
+                // 验证嵌套结构
+                const outerLayers = deserialized.getLayers();
+                const deserializedInnerGroup = outerLayers.item(1); // 第二个应该是内层组
+                
+                let nestedCorrect = false;
+                if (deserializedInnerGroup instanceof LayerGroup) {
+                    const innerLayers = deserializedInnerGroup.getLayers();
+                    nestedCorrect = innerLayers.getLength() === 2 && 
+                                  deserializedInnerGroup.get('id') === 'inner-group';
+                    
+                    log(`📊 反序列化后内层组子图层数量: ${innerLayers.getLength()}`);
+                    log(`🔍 内层组ID匹配: ${deserializedInnerGroup.get('id') === 'inner-group' ? '✅' : '❌'}`);
+                } else {
+                    log(`❌ 内层组类型错误: ${deserializedInnerGroup?.constructor.name || 'undefined'}`);
+                }
+                
+                if (nestedCorrect && outerLayers.getLength() === 2) {
+                    log('✅ 嵌套GroupLayer测试通过\n');
+                    passCount++;
+                } else {
+                    log('❌ 嵌套GroupLayer测试失败\n');
+                }
+                
+            } catch (error) {
+                log(`❌ 嵌套GroupLayer测试异常: ${error.message}\n`);
+            }
+        };
+        
+        // 测试复杂层次结构
+        window.testComplexGroup = function() {
+            log('🧪 测试复杂层次结构...\n');
+            
+            try {
+                testCount++;
+                
+                // 创建深层嵌套结构
+                const deepestLayer = new TileLayer({ source: new OSM() });
+                deepestLayer.set('id', 'deepest');
+                deepestLayer.set('name', 'Deepest Layer');
+                
+                const level2Group = new LayerGroup({
+                    layers: [deepestLayer]
+                });
+                level2Group.set('id', 'level-2');
+                level2Group.set('name', 'Level 2 Group');
+                
+                const level1Group = new LayerGroup({
+                    layers: [level2Group]
+                });
+                level1Group.set('id', 'level-1');
+                level1Group.set('name', 'Level 1 Group');
+                
+                const rootGroup = new LayerGroup({
+                    layers: [level1Group]
+                });
+                rootGroup.set('id', 'root');
+                rootGroup.set('name', 'Root Group');
+                
+                log('创建复杂层次结构 (4层深度)');
+                log(`  - Root -> Level1 -> Level2 -> Deepest`);
+                
+                // 序列化和反序列化
+                const serialized = serializeLayer(rootGroup);
+                const deserialized = deserializeLayer(serialized);
+                
+                // 验证深层结构
+                let currentLayer = deserialized;
+                let depth = 0;
+                let structureCorrect = true;
+                
+                while (currentLayer instanceof LayerGroup && depth < 4) {
+                    const children = currentLayer.getLayers();
+                    log(`  深度 ${depth}: ${currentLayer.get('name')} (子图层: ${children.getLength()})`);
+                    
+                    if (children.getLength() === 0) break;
+                    
+                    currentLayer = children.item(0);
+                    depth++;
+                }
+                
+                if (depth === 3 && currentLayer?.get('id') === 'deepest') {
+                    log('✅ 复杂层次结构测试通过\n');
+                    passCount++;
+                } else {
+                    log(`❌ 复杂层次结构测试失败 (深度: ${depth})\n`);
+                }
+                
+            } catch (error) {
+                log(`❌ 复杂层次结构测试异常: ${error.message}\n`);
+            }
+        };
+        
+        // 测试混合图层类型
+        window.testMixedLayers = function() {
+            log('🧪 测试混合图层类型...\n');
+            
+            try {
+                testCount++;
+                
+                // 创建各种类型的图层
+                const tileLayer = new TileLayer({ source: new OSM() });
+                tileLayer.set('id', 'tile');
+                tileLayer.set('name', 'Tile Layer');
+                
+                const vectorLayer = new VectorLayer({ 
+                    source: new VectorSource({
+                        features: [new Feature({ geometry: new Point([0, 0]) })]
+                    })
+                });
+                vectorLayer.set('id', 'vector');
+                vectorLayer.set('name', 'Vector Layer');
+                
+                const subGroup = new LayerGroup({
+                    layers: [tileLayer]
+                });
+                subGroup.set('id', 'sub-group');
+                subGroup.set('name', 'Sub Group');
+                
+                const mixedGroup = new LayerGroup({
+                    layers: [vectorLayer, subGroup, tileLayer]
+                });
+                mixedGroup.set('id', 'mixed-group');
+                mixedGroup.set('name', 'Mixed Group');
+                
+                log('创建混合图层组:');
+                log(`  - VectorLayer: ${vectorLayer.get('name')}`);
+                log(`  - GroupLayer: ${subGroup.get('name')}`);
+                log(`  - TileLayer: ${tileLayer.get('name')}`);
+                
+                // 序列化和反序列化
+                const serialized = serializeLayer(mixedGroup);
+                const deserialized = deserializeLayer(serialized);
+                
+                // 验证混合类型
+                const children = deserialized.getLayers();
+                const types = [];
+                children.forEach((child) => {
+                    types.push(child.constructor.name);
+                });
+                
+                log(`反序列化后的图层类型: ${types.join(', ')}`);
+                
+                const hasVector = types.includes('VectorLayer');
+                const hasGroup = types.includes('LayerGroup');
+                const hasTile = types.includes('TileLayer');
+                
+                if (hasVector && hasGroup && hasTile && children.getLength() === 3) {
+                    log('✅ 混合图层类型测试通过\n');
+                    passCount++;
+                } else {
+                    log('❌ 混合图层类型测试失败\n');
+                }
+                
+            } catch (error) {
+                log(`❌ 混合图层类型测试异常: ${error.message}\n`);
+            }
+        };
+        
+        // 显示图层结构
+        window.showLayerStructure = function() {
+            if (!currentGroupStructure) {
+                log('请先运行嵌套GroupLayer测试来创建图层结构');
+                return;
+            }
+            
+            const structureDiv = document.getElementById('layer-structure');
+            const contentDiv = document.getElementById('structure-content');
+            
+            function buildLayerTree(layer, depth = 0) {
+                const indent = '  '.repeat(depth);
+                const layerInfo = `${indent}${layer.constructor.name}: ${layer.get('name') || 'Unnamed'} (ID: ${layer.get('id') || 'No ID'})`;
+                
+                let html = `<div class="layer-item ${layer instanceof LayerGroup ? 'layer-group' : ''}">${layerInfo}</div>`;
+                
+                if (layer instanceof LayerGroup) {
+                    const children = layer.getLayers();
+                    children.forEach((child) => {
+                        html += buildLayerTree(child, depth + 1);
+                    });
+                }
+                
+                return html;
+            }
+            
+            contentDiv.innerHTML = buildLayerTree(currentGroupStructure);
+            structureDiv.style.display = 'block';
+        };
+        
+        // 运行所有测试
+        window.runAllGroupTests = function() {
+            testCount = 0;
+            passCount = 0;
+            
+            log('🚀 开始运行所有GroupLayer测试...\n');
+            
+            testSimpleGroup();
+            setTimeout(() => {
+                testNestedGroup();
+                setTimeout(() => {
+                    testComplexGroup();
+                    setTimeout(() => {
+                        testMixedLayers();
+                        setTimeout(() => {
+                            showFinalResults();
+                        }, 300);
+                    }, 300);
+                }, 300);
+            }, 300);
+        };
+        
+        // 显示最终结果
+        function showFinalResults() {
+            const successRate = testCount > 0 ? ((passCount / testCount) * 100).toFixed(1) : 0;
+            
+            log(`\n🎉 GroupLayer递归测试总结:`);
+            log(`✅ 测试通过: ${passCount}/${testCount} (${successRate}%)`);
+            
+            if (passCount === testCount) {
+                log(`\n🎯 所有GroupLayer递归测试通过！`);
+                log(`  ✅ 简单GroupLayer序列化正常`);
+                log(`  ✅ 嵌套GroupLayer递归处理正确`);
+                log(`  ✅ 复杂层次结构保持完整`);
+                log(`  ✅ 混合图层类型支持良好`);
+                log(`  ✅ 子图层ID/Name正确保存和恢复`);
+            } else {
+                log(`\n⚠️ 有 ${testCount - passCount} 个测试失败，需要检查递归逻辑`);
+            }
+        }
+        
+        // 清空输出
+        window.clearOutput = function() {
+            document.getElementById('output').textContent = '输出已清空...\n';
+            document.getElementById('layer-structure').style.display = 'none';
+            testCount = 0;
+            passCount = 0;
+            currentGroupStructure = null;
+        };
+        
+        // 辅助函数
+        function log(message) {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            output.textContent += `[${timestamp}] ${message}\n`;
+            output.scrollTop = output.scrollHeight;
+            console.log(message);
+        }
+        
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🌳 GroupLayer递归测试页面启动');
+            log('📋 准备测试GroupLayer的递归序列化功能');
+        });
+    </script>
+</body>
+</html>
