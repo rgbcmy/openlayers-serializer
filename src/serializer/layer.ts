@@ -1,16 +1,18 @@
 import Map from "ol/Map.js";
-import type BaseLayer from "ol/layer/Base.js";
+import BaseLayer from "ol/layer/Base.js";
 import type { IBaseLayer, IGroupLayer, IHeatmap, IImageLayer, ISerializedLayer, ITileLayer, IVectorLayer, IVectorTileLayer, IWebGLTileLayer } from "../dto";
 import LayerGroup from "ol/layer/Group.js";
 import TileLayer from "ol/layer/Tile.js";
 import VectorLayer from "ol/layer/Vector.js";
 import { deserializeLayerStyle, deserializeStyle, serializeLayerStyle, serializeStyle } from "./style";
 import { deserializeSource, serializeSource } from "./source";
+import { deserializeFunction, serializeFunction } from "./utils";
 import type { IVectorSource, IVectorTile } from "../dto/source";
 import ImageLayer from "ol/layer/Image.js";
 import WebGLTileLayer from 'ol/layer/WebGLTile.js';
 import VectorTileLayer from "ol/layer/VectorTile.js";
 import HeatmapLayer from "ol/layer/Heatmap.js";
+import OSM from "ol/source/OSM.js";
 import Style from "ol/style/Style.js";
 import CircleStyle from "ol/style/Circle.js";
 import Stroke from "ol/style/Stroke.js";
@@ -62,6 +64,7 @@ export function serializeLayer(layer: BaseLayer): IBaseLayer {
         } else if (layer instanceof VectorLayer) {
             layerDto.type = 'Vector';
             (layerDto as IVectorLayer).renderBuffer = layer.getRenderBuffer() ?? 100;
+            (layerDto as IVectorLayer).renderOrder = serializeFunction(layer.getRenderOrder()) as any;
             (layerDto as IVectorLayer).declutter = layer.getDeclutter() ?? false;
             (layerDto as IVectorLayer).updateWhileAnimating = layer.getUpdateWhileAnimating() ?? false;
             (layerDto as IVectorLayer).updateWhileInteracting = layer.getUpdateWhileInteracting() ?? false;
@@ -117,8 +120,36 @@ export function serializeLayer(layer: BaseLayer): IBaseLayer {
         }
 
         else {
-            throw new Error(`Unsupported layer type: ${layer.constructor.name}`);
-
+            // 添加更详细的错误信息来调试未知图层类型
+            const layerInfo = {
+                constructorName: layer.constructor.name,
+                className: layer.getClassName(),
+                layerType: typeof layer,
+                properties: Object.getOwnPropertyNames(layer),
+                isBaseLayer: layer instanceof BaseLayer,
+                toString: layer.toString()
+            };
+            
+            console.warn('Unknown layer type detected:', layerInfo);
+            
+            // 尝试作为基础图层处理，而不是直接抛出错误
+            console.warn(`Attempting to serialize unknown layer type "${layer.constructor.name}" as base layer`);
+            
+            // 设置一个通用的类型
+            layerDto.type = 'Unknown';
+            (layerDto as any).originalType = layer.constructor.name;
+            (layerDto as any).className = layer.getClassName();
+            
+            // 尝试获取源如果存在
+            try {
+                const source = (layer as any).getSource?.();
+                if (source) {
+                    (layerDto as any).source = serializeSource(source);
+                }
+            } catch (sourceError) {
+                console.warn('Failed to serialize source for unknown layer:', sourceError);
+                (layerDto as any).source = null;
+            }
         }
 
         //todo other layer
@@ -172,7 +203,8 @@ export function deserializeLayer(layerDto: IBaseLayer): BaseLayer {
             maxResolution: layerDto.maxResolution ?? undefined,
             minZoom: layerDto.minZoom ?? undefined,
             maxZoom: layerDto.maxZoom ?? undefined,
-            renderOrder: eval(`(${(layerDto as IVectorLayer).renderOrder})`) ?? undefined,
+            renderOrder: (layerDto as IVectorLayer).renderOrder ? 
+              deserializeFunction((layerDto as IVectorLayer).renderOrder) as any : undefined,
             renderBuffer: (layerDto as IVectorLayer).renderBuffer ?? 100,
             source: (layerDto as IVectorLayer).source ? deserializeSource((layerDto as IVectorLayer).source) : undefined,
             style: style,
@@ -301,8 +333,57 @@ export function deserializeLayer(layerDto: IBaseLayer): BaseLayer {
             properties: layerDto.properties || {},
         })
     }
+    else if (layerDto.type === 'Unknown') {
+        // 处理未知类型的图层，创建一个基础的TileLayer作为后备
+        console.warn(`Deserializing unknown layer type "${(layerDto as any).originalType}" as TileLayer`);
+        
+        let source;
+        try {
+            source = (layerDto as any).source ? deserializeSource((layerDto as any).source) : undefined;
+        } catch (sourceError) {
+            console.warn('Failed to deserialize source for unknown layer, using OSM as fallback:', sourceError);
+            // 使用OSM作为后备数据源
+            source = new OSM();
+        }
+        
+        layer = new TileLayer({
+            className: layerDto.className ?? 'ol-layer',
+            opacity: layerDto.opacity ?? 1,
+            visible: layerDto.visible ?? true,
+            extent: layerDto.extent ?? undefined,
+            zIndex: layerDto.zIndex ?? undefined,
+            minResolution: layerDto.minResolution ?? undefined,
+            maxResolution: layerDto.maxResolution ?? undefined,
+            minZoom: layerDto.minZoom ?? undefined,
+            maxZoom: layerDto.maxZoom ?? undefined,
+            source: source,
+            properties: layerDto.properties || {},
+        });
+        
+        // 添加原始类型信息
+        layer.set('originalType', (layerDto as any).originalType);
+        layer.set('isUnknownLayer', true);
+    }
     else {
-        throw new Error(`Unsupported layer type: ${layerDto.type}`);
+        console.warn(`Unknown layer type: ${layerDto.type}, creating fallback TileLayer`);
+        
+        // 创建一个后备的TileLayer
+        layer = new TileLayer({
+            className: layerDto.className ?? 'ol-layer',
+            opacity: layerDto.opacity ?? 1,
+            visible: layerDto.visible ?? true,
+            extent: layerDto.extent ?? undefined,
+            zIndex: layerDto.zIndex ?? undefined,
+            minResolution: layerDto.minResolution ?? undefined,
+            maxResolution: layerDto.maxResolution ?? undefined,
+            minZoom: layerDto.minZoom ?? undefined,
+            maxZoom: layerDto.maxZoom ?? undefined,
+            source: new OSM(),
+            properties: layerDto.properties || {},
+        });
+        
+        layer.set('originalType', layerDto.type);
+        layer.set('isFallbackLayer', true);
     }
     layer.set('id', layerDto.id ?? crypto.randomUUID());
     layer.set('name', layerDto.name ?? "Untitled")

@@ -33,7 +33,7 @@ import { deserializeFunction, serializeFunction } from './utils';
 import TileGrid from 'ol/tilegrid/TileGrid.js';
 import type { AttributionLike } from 'ol/source/Source.js';
 import type { Extent } from 'ol/extent.js';
-import { toSize, type Size } from 'ol/size.js';
+import type { Size } from 'ol/size.js';
 import { all, bbox, tile } from 'ol/loadingstrategy.js'
 import type { TileCoord } from 'ol/tilecoord.js';
 import type { Projection } from 'ol/proj.js';
@@ -43,12 +43,63 @@ import type { ServerType } from 'ol/source/wms.js';
 import type { SourceInfo } from 'ol/source/GeoTIFF.js';
 import WMTSTileGrid from 'ol/tilegrid/WMTS.js';
 import type { RequestEncoding } from 'ol/source/WMTS.js';
+
 //注册全局函数
 registerItem('quadKey', quadKey);
+
+/**
+ * 创建一个保持 this 上下文的函数包装器
+ * 这个函数延迟绑定 this 上下文，直到运行时才确定 this 的值
+ * 注意：目前暂时不使用，因为闭包在序列化/反序列化后会丢失
+ */
+/* 
+function createContextBoundFunction(serializedFunction: string) {
+  // 使用正确的反序列化函数
+  const originalFunction = deserializeFunctionFromDto(serializedFunction);
+  
+  // 检查是否成功创建了函数
+  if (typeof originalFunction !== 'function') {
+    console.warn('Failed to create function from serialized data:', serializedFunction);
+    // 返回一个默认的 tileLoadFunction
+    return function(this: any, url: string, image: HTMLImageElement | HTMLCanvasElement) {
+      // 使用标准的图片加载逻辑
+      if (image instanceof HTMLImageElement) {
+        image.crossOrigin = 'anonymous';
+        image.src = url;
+      }
+    };
+  }
+  
+  // 返回一个包装函数，它会在调用时使用正确的 this 上下文
+  return function(this: any, ...args: any[]) {
+    // 这里的 this 将是 OpenLayers source 实例
+    return originalFunction.apply(this, args);
+  };
+}
+*/
+
+// 临时辅助函数，用于处理函数序列化的类型问题
+function serializeFunctionForDto(func: Function | undefined): string | undefined {
+  const result = serializeFunction(func);
+  return result ? JSON.stringify(result) : undefined;
+}
+
+// 临时辅助函数，用于处理函数反序列化的类型问题  
+function deserializeFunctionFromDto(serialized: string | undefined): Function | undefined {
+  if (!serialized) return undefined;
+  try {
+    const parsed = JSON.parse(serialized);
+    return deserializeFunction(parsed);
+  } catch {
+    // 兼容旧的字符串格式
+    return deserializeFunction(serialized);
+  }
+}
 //矢量数据源加载策略
 
 
 export function serializeSource(source: Source): ISerializedSource {
+  debugger
   let id=source.get('id') || crypto.randomUUID();
   let name=source.get('name')||"Untitled";
   if (source instanceof IIIF) {
@@ -101,7 +152,7 @@ export function serializeSource(source: Source): ISerializedSource {
       interpolate: source.getInterpolate() ?? true,
       maxZoom: source.getTileGrid()?.getMaxZoom() || source.get('maxZoom') || 19,
       reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
-      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      tileLoadFunction: serializeFunctionForDto(source.getTileLoadFunction()),
       wrapX: source.getWrapX() ?? true,
       transition: ((source as any).tileOptions.transition) || source.get('transition'),
       zDirection: (source.zDirection as any) ?? 0,
@@ -132,7 +183,7 @@ export function serializeSource(source: Source): ISerializedSource {
       minZoom: source.getTileGrid()?.getMinZoom() || source.get('minZoom'),
       maxZoom: source.getTileGrid()?.getMaxZoom() || source.get('maxZoom'),
       reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
-      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      tileLoadFunction: serializeFunctionForDto(source.getTileLoadFunction()),
       transition: ((source as any).tileOptions.transition) || source.get('transition') || 250,
       //todo
       url: source.get('url'),
@@ -156,7 +207,8 @@ export function serializeSource(source: Source): ISerializedSource {
       maxZoom: source.getTileGrid()?.getMaxZoom() || source.get('maxZoom') || 19,
       opaque: ((source as any).opaque_) || source.get('opaque') || true,
       reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
-      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      // 恢复 tileLoadFunction 序列化，使用新的上下文绑定方法
+      tileLoadFunction: serializeFunctionForDto(source.getTileLoadFunction()),
       transition: ((source as any).tileOptions.transition) || source.get('transition') || 250,
       url: source.get('url') || 'https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png',
       wrapX: source.getWrapX() ?? true,
@@ -189,12 +241,13 @@ export function serializeSource(source: Source): ISerializedSource {
       maxResolution: source.get('maxResolution'),//这个是用来创建 tileGrid 的,但是没有get方法，如果没有传入 tileGrid
       tileGrid: tileGridDto,
       // TileGrid type 
-      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),//((url: string, image: HTMLImageElement) => void)
+      // 跳过 tileLoadFunction 避免 this 上下文问题
+      // tileLoadFunction: serializeFunctionForDto(source.getTileLoadFunction()),//((url: string, image: HTMLImageElement) => void)
       //这个不存储，因为不同的设备像素比率不同
       //tilePixelRatio: source.getTilePixelRatio() ?? 1,
       tileSize: (tileGrid as any)['tileSize_'],
       gutter: source.getGutter() ?? 0,
-      tileUrlFunction: serializeFunction(source.getTileUrlFunction()),//((tileCoord: [number, number, number], pixelRatio: number, projection: string) => string) | null;
+      tileUrlFunction: serializeFunctionForDto(source.getTileUrlFunction()),//((tileCoord: [number, number, number], pixelRatio: number, projection: string) => string) | null;
       //todo
       url: source.get('url'),
       urls: source.getUrls(),
@@ -223,7 +276,7 @@ export function serializeSource(source: Source): ISerializedSource {
       tileGrid: tileGridDto,
       projection: source.getProjection()?.getCode() ?? undefined,
       reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
-      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      tileLoadFunction: serializeFunctionForDto(source.getTileLoadFunction()),
       //todo
       url: source.get('url'),
       wrapX: source.getWrapX() ?? true,
@@ -245,7 +298,7 @@ export function serializeSource(source: Source): ISerializedSource {
       jsonp: source.get('jsonp') ?? false,
       reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
       tileJson: source.getTileJSON(),
-      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      tileLoadFunction: serializeFunctionForDto(source.getTileLoadFunction()),
       tileSize: source['tileSize_'],
       //todo
       url: source.get('url'),
@@ -277,7 +330,7 @@ export function serializeSource(source: Source): ISerializedSource {
       //tileClass:source['tileClass']
       tileGrid: tileGridDto,
       serverType: source['serverType_'],
-      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      tileLoadFunction: serializeFunctionForDto(source.getTileLoadFunction()),
       //todo
       url: source.get('url'),
       urls: source.getUrls(),
@@ -318,7 +371,7 @@ export function serializeSource(source: Source): ISerializedSource {
       dimensions: source.getDimensions(),
       //todo url
       url: source.get('url'),
-      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      tileLoadFunction: serializeFunctionForDto(source.getTileLoadFunction()),
       urls: source.getUrls(),
       wrapX: source.getWrapX() ?? true,
       transition: ((source as any).tileOptions.transition) || source.get('transition'),
@@ -406,7 +459,7 @@ export function serializeSource(source: Source): ISerializedSource {
       crossOrigin: ((source as any).crossOrigin) || source.get('crossOrigin'),
       interpolate: source.getInterpolate() ?? true,
       reprojectionErrorThreshold: ((source as any).reprojectionErrorThreshold_) || source.get('reprojectionErrorThreshold') || 0.5,
-      tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      tileLoadFunction: serializeFunctionForDto(source.getTileLoadFunction()),
       wrapX: source.getWrapX() ?? true,
       transition: ((source as any).tileOptions.transition) || source.get('transition') || 250,
       //todo 无法获取collections
@@ -538,9 +591,9 @@ export function serializeSource(source: Source): ISerializedSource {
       maxResolution: source.get('maxResolution'),//这个是用来创建 tileGrid 的,但是没有get方法，如果没有传入 tileGrid
       tileGrid: tileGridDto,
       //todo 如果是自定义函数才需要序列化
-      // tileLoadFunction: serializeFunction(source.getTileLoadFunction()),
+      // tileLoadFunction: serializeFunctionForDto(source.getTileLoadFunction()),
       //todo
-      //tileUrlFunction: serializeFunction(source.getTileUrlFunction()),
+      //tileUrlFunction: serializeFunctionForDto(source.getTileUrlFunction()),
       //todo
       url: source.get('url'),
       transition: ((source as any).tileOptions.transition) || source.get('transition') || 250,
@@ -658,7 +711,8 @@ export function deserializeSource(data: ISerializedSource): any {
       break;
     case 'OSM':
       let osmSourceDto = data as IOSM
-      source= new OSM({
+      // 先创建基本的 source，不包含 tileLoadFunction
+      let osmSource = new OSM({
         attributions: osmSourceDto.attributions as AttributionLike,
         cacheSize: osmSourceDto.cacheSize ?? undefined,
         crossOrigin: osmSourceDto.crossOrigin,
@@ -666,12 +720,23 @@ export function deserializeSource(data: ISerializedSource): any {
         maxZoom: osmSourceDto.maxZoom ?? 19,
         opaque: osmSourceDto.opaque ?? true,
         reprojectionErrorThreshold: osmSourceDto.reprojectionErrorThreshold ?? 0.5,
-        tileLoadFunction: osmSourceDto.tileLoadFunction ? injectFunction(osmSourceDto.tileLoadFunction) : undefined,
         url: osmSourceDto.url ?? 'https://{a-c}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         wrapX: osmSourceDto.wrapX ?? true,
         transition: osmSourceDto.transition ?? 250,
-        zDirection: osmSourceDto.zDirection ?? 0
+        zDirection: osmSourceDto.zDirection ?? 0,
+        // 暂时不设置 tileLoadFunction
       });
+      
+      // 在创建 source 后，如果有自定义 tileLoadFunction，则手动设置
+      if (osmSourceDto.tileLoadFunction) {
+        const customFunction = deserializeFunctionFromDto(osmSourceDto.tileLoadFunction);
+        if (typeof customFunction === 'function') {
+          // 直接替换 source 的内部 tileLoadFunction
+          (osmSource as any).tileLoadFunction_ = customFunction.bind(osmSource);
+        }
+      }
+      
+      source = osmSource;
       break;
     case 'StadiaMaps':
       let stadiaMapsDto = data as IStadiaMaps
@@ -697,7 +762,7 @@ export function deserializeSource(data: ISerializedSource): any {
     case 'XYZ':
       let xyzSourceDto = data as IXYZ
       //let tileUrlFunction = xyzSourceDto.tileUrlFunction ? eval("(" + xyzSourceDto.tileUrlFunction + ")") : undefined;
-      let tileUrlFunction = xyzSourceDto.tileUrlFunction ? injectFunction(xyzSourceDto.tileUrlFunction) : undefined;
+      let tileUrlFunction = xyzSourceDto.tileUrlFunction ? deserializeFunctionFromDto(xyzSourceDto.tileUrlFunction) as any : undefined;
       let tileLoadFunction = xyzSourceDto.tileLoadFunction ? injectFunction(xyzSourceDto.tileLoadFunction) : undefined;
 
 
@@ -800,9 +865,6 @@ export function deserializeSource(data: ISerializedSource): any {
       })
       break;
 
-    case 'OSM':
-      source= new OSM();
-      break;
     case 'UTFGrid':
       let utfGridDto = data as IUTFGrid
       source= new UTFGrid({
@@ -1000,7 +1062,7 @@ export function deserializeSource(data: ISerializedSource): any {
           tileSizes: vectorTileDto.tileGrid.tileSizes ?? undefined
         }) : undefined,
         tileLoadFunction: vectorTileDto.tileLoadFunction ? injectFunction(vectorTileDto.tileLoadFunction) : undefined,
-        tileUrlFunction: vectorTileDto.tileUrlFunction ? injectFunction(vectorTileDto.tileUrlFunction) : undefined,
+        tileUrlFunction: vectorTileDto.tileUrlFunction ? deserializeFunctionFromDto(vectorTileDto.tileUrlFunction) as any : undefined,
         url: vectorTileDto.url ?? undefined,
         transition: vectorTileDto.transition ?? undefined,
         urls: vectorTileDto.urls ?? undefined,

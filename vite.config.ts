@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts' // 用于生成 .d.ts 类型声明
 import tsconfigPaths from 'vite-tsconfig-paths';
+
 export default defineConfig({
   build: {
     lib: {

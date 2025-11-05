@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenLayers Serializer 开发测试</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .content {
+            display: flex;
+            flex-wrap: wrap;
+        }
+        
+        .map-section {
+            flex: 1;
+            min-width: 300px;
+            padding: 20px;
+        }
+        
+        .controls-section {
+            flex: 0 0 300px;
+            padding: 20px;
+            border-left: 1px solid #eee;
+            background: #fafafa;
+        }
+        
+        #map {
+            width: 100%;
+            height: 400px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        button.secondary {
+            background: #2196F3;
+        }
+        
+        button.secondary:hover {
+            background: #1976D2;
+        }
+        
+        button.danger {
+            background: #f44336;
+        }
+        
+        button.danger:hover {
+            background: #d32f2f;
+        }
+        
+        .output {
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            line-height: 1.4;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
+        .status.info {
+            background: #cce7ff;
+            color: #004085;
+            border: 1px solid #b3d7ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛠️ OpenLayers Serializer 开发测试</h1>
+            <p>直接使用源代码进行测试和开发</p>
+        </div>
+        
+        <div class="content">
+            <div class="map-section">
+                <h3>🌍 地图区域</h3>
+                <div id="map"></div>
+                
+                <div class="button-group">
+                    <button onclick="addRandomPoint()">➕ 添加随机点</button>
+                    <button onclick="changeView()" class="secondary">🔄 切换视图</button>
+                    <button onclick="clearMap()" class="danger">🗑️ 清空</button>
+                </div>
+            </div>
+            
+            <div class="controls-section">
+                <h3>🔧 控制面板</h3>
+                
+                <div id="status" class="status info">
+                    准备就绪
+                </div>
+                
+                <div class="button-group">
+                    <button onclick="testExport()">📤 测试导出</button>
+                    <button onclick="testImport()" class="secondary">📥 测试导入</button>
+                </div>
+                
+                <div class="button-group">
+                    <button onclick="testValidation()" class="secondary">🛡️ 测试验证</button>
+                    <button onclick="clearOutput()" class="danger">🗑️ 清空输出</button>
+                </div>
+                
+                <h4>📋 输出日志</h4>
+                <div id="output" class="output">
+等待操作...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // 使用完整导入确保所有依赖正确加载
+        import 'ol/ol.css';
+        import Map from 'ol/Map.js';
+        import View from 'ol/View.js';
+        import {Tile as TileLayer, Vector as VectorLayer} from 'ol/layer.js';
+        import {OSM, Vector as VectorSource} from 'ol/source.js';
+        import Feature from 'ol/Feature.js';
+        import Point from 'ol/geom/Point.js';
+        import {Style, Circle, Fill, Stroke} from 'ol/style.js';
+        import {fromLonLat} from 'ol/proj.js';
+        
+        // 直接导入源代码进行开发测试
+        import { serializeMap, deserializeMap } from '/src/serializer/map.js';
+        import { serializeView, deserializeView } from '/src/serializer/view.js';
+        import { ValidationError, DeserializationError } from '/src/common/error-handling.js';
+        
+        // 全局变量
+        let map;
+        let vectorSource;
+        let osmLayer;
+        let vectorLayer;
+        let currentMapData = null;
+
+        // 初始化地图
+        function initMap() {
+            updateStatus('正在初始化地图...', 'info');
+            
+            try {
+                // 创建OSM图层
+                osmLayer = new TileLayer({
+                    source: new OSM(),
+                    name: 'OpenStreetMap'
+                });
+
+                // 创建向量数据源和图层
+                vectorSource = new VectorSource();
+                vectorLayer = new VectorLayer({
+                    source: vectorSource,
+                    name: 'Vector Layer',
+                    style: new Style({
+                        fill: new Fill({
+                            color: 'rgba(255, 255, 255, 0.2)'
+                        }),
+                        stroke: new Stroke({
+                            color: '#ffcc33',
+                            width: 2
+                        }),
+                        image: new Circle({
+                            radius: 7,
+                            fill: new Fill({
+                                color: '#ffcc33'
+                            })
+                        })
+                    })
+                });
+
+                // 创建地图
+                map = new Map({
+                    target: 'map',
+                    layers: [osmLayer, vectorLayer],
+                    view: new View({
+                        center: [0, 0],
+                        zoom: 2
+                    })
+                });
+
+                // 设置地图属性
+                map.set('name', '测试地图');
+                map.set('id', 'test-map-' + Date.now());
+                
+                updateStatus('地图初始化成功！', 'success');
+                log('🎯 地图初始化完成');
+                log(`📍 地图中心: [${map.getView().getCenter().map(c => c.toFixed(2)).join(', ')}]`);
+                log(`🔍 缩放级别: ${map.getView().getZoom()}`);
+                
+            } catch (error) {
+                updateStatus(`地图初始化失败: ${error.message}`, 'error');
+                log(`❌ 初始化错误: ${error.message}`);
+                console.error(error);
+            }
+        }
+
+        // 测试导出
+        window.testExport = function() {
+            try {
+                updateStatus('正在测试导出功能...', 'info');
+                
+                // 使用源代码中的序列化函数
+                currentMapData = serializeMap(map);
+                
+                log('📤 地图序列化成功:');
+                log(JSON.stringify(currentMapData, null, 2));
+                
+                updateStatus('导出测试成功！', 'success');
+                
+                // 显示摘要
+                const summary = {
+                    mapId: currentMapData.id,
+                    mapName: currentMapData.name,
+                    layerCount: currentMapData.layers.length,
+                    viewCenter: currentMapData.view.center,
+                    viewZoom: currentMapData.view.zoom
+                };
+                
+                log('📊 数据摘要:');
+                log(JSON.stringify(summary, null, 2));
+                
+            } catch (error) {
+                updateStatus(`导出失败: ${error.message}`, 'error');
+                log(`❌ 导出错误: ${error.message}`);
+                console.error(error);
+            }
+        };
+
+        // 测试导入
+        window.testImport = function() {
+            if (!currentMapData) {
+                updateStatus('请先导出地图数据', 'error');
+                log('⚠️ 没有可导入的数据，请先导出');
+                return;
+            }
+
+            try {
+                updateStatus('正在测试导入功能...', 'info');
+                
+                // 使用源代码中的反序列化函数
+                const restoredMap = deserializeMap(currentMapData);
+                
+                // 替换当前地图
+                map.setTarget(null); // 移除旧地图
+                map = restoredMap;
+                map.setTarget('map'); // 设置新地图
+                
+                updateStatus('导入测试成功！', 'success');
+                log('📥 地图反序列化成功');
+                log('🔄 地图已恢复到之前的状态');
+                
+            } catch (error) {
+                updateStatus(`导入失败: ${error.message}`, 'error');
+                log(`❌ 导入错误: ${error.message}`);
+                
+                if (error instanceof ValidationError) {
+                    log(`🛡️ 验证错误 - 数据格式不正确`);
+                } else if (error instanceof DeserializationError) {
+                    log(`🔧 反序列化错误 - 无法创建地图对象`);
+                    if (error.context) {
+                        log(`📋 错误上下文:`);
+                        log(JSON.stringify(error.context, null, 2));
+                    }
+                    if (error.suggestions) {
+                        log(`💡 修复建议:`);
+                        log(JSON.stringify(error.suggestions, null, 2));
+                    }
+                }
+                console.error(error);
+            }
+        };
+
+        // 测试验证
+        window.testValidation = function() {
+            updateStatus('正在测试数据验证...', 'info');
+            log('🧪 开始测试数据验证...');
+            
+            try {
+                // 测试1: 正常数据验证
+                log('\n📋 测试1: 正常数据验证');
+                const validData = serializeMap(map);
+                const validatedMap = deserializeMap(validData);
+                log('✅ 正常数据验证通过');
+                
+                // 测试2: 错误数据验证
+                log('\n📋 测试2: 错误数据验证');
+                try {
+                    deserializeMap({ invalid: 'data' });
+                    log('❌ 应该抛出验证错误');
+                } catch (validationError) {
+                    if (validationError instanceof ValidationError) {
+                        log('✅ 验证错误正确捕获');
+                        log(`错误信息: ${validationError.message}`);
+                    } else {
+                        log(`⚠️ 意外错误类型: ${validationError.constructor.name}`);
+                    }
+                }
+                
+                // 测试3: 缺失字段测试
+                log('\n📋 测试3: 缺失字段测试');
+                try {
+                    const incompleteData = { ...validData };
+                    delete incompleteData.view;
+                    deserializeMap(incompleteData);
+                    log('❌ 应该抛出缺失字段错误');
+                } catch (missingFieldError) {
+                    log('✅ 缺失字段错误正确捕获');
+                    log(`错误信息: ${missingFieldError.message}`);
+                }
+                
+                updateStatus('验证测试完成！', 'success');
+                log('\n🎉 所有验证测试通过');
+                
+            } catch (error) {
+                updateStatus(`验证测试失败: ${error.message}`, 'error');
+                log(`❌ 验证测试失败: ${error.message}`);
+                console.error(error);
+            }
+        };
+
+        // 添加随机点
+        window.addRandomPoint = function() {
+            if (!vectorSource) {
+                updateStatus('向量数据源不可用', 'error');
+                return;
+            }
+
+            const center = map.getView().getCenter();
+            const randomOffset = 1000000;
+            
+            const randomPoint = new Point([
+                center[0] + (Math.random() - 0.5) * randomOffset,
+                center[1] + (Math.random() - 0.5) * randomOffset
+            ]);
+
+            const feature = new Feature({
+                geometry: randomPoint,
+                name: `随机点 ${new Date().toLocaleTimeString()}`
+            });
+
+            vectorSource.addFeature(feature);
+            
+            updateStatus('已添加随机点', 'success');
+            log(`➕ 添加随机点: [${randomPoint.getCoordinates().map(c => c.toFixed(2)).join(', ')}]`);
+        };
+
+        // 切换视图
+        window.changeView = function() {
+            const views = [
+                { center: [0, 0], zoom: 2, name: '世界视图' },
+                { center: [11600000, 4000000], zoom: 6, name: '中国视图' },
+                { center: [13400000, 3500000], zoom: 10, name: '北京视图' },
+                { center: [-7400000, 6200000], zoom: 8, name: '欧洲视图' }
+            ];
+            
+            const randomView = views[Math.floor(Math.random() * views.length)];
+            
+            map.getView().animate({
+                center: randomView.center,
+                zoom: randomView.zoom,
+                duration: 1000
+            });
+            
+            updateStatus(`视图切换到: ${randomView.name}`, 'success');
+            log(`🔄 视图切换: ${randomView.name} [${randomView.center.join(', ')}] 缩放:${randomView.zoom}`);
+        };
+
+        // 清空地图
+        window.clearMap = function() {
+            if (vectorSource) {
+                vectorSource.clear();
+                updateStatus('地图特征已清空', 'success');
+                log('🗑️ 清空所有地图特征');
+            }
+        };
+
+        // 清空输出
+        window.clearOutput = function() {
+            document.getElementById('output').textContent = '输出已清空...\n';
+            updateStatus('输出已清空', 'info');
+        };
+
+        // 辅助函数
+        function updateStatus(message, type) {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+        }
+
+        function log(message, data = null) {
+            const output = document.getElementById('output');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            if (data) {
+                output.textContent += `[${timestamp}] ${message}\n${JSON.stringify(data, null, 2)}\n\n`;
+            } else {
+                output.textContent += `[${timestamp}] ${message}\n`;
+            }
+            
+            output.scrollTop = output.scrollHeight;
+        }
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 OpenLayers Serializer 开发测试启动');
+            log('📚 Version: 2.0 (直接源代码测试)');
+            initMap();
+        });
+
+    </script>
+</body>
+</html>
