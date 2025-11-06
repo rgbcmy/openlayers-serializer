@@ -68,13 +68,20 @@ export class TileWMSSourceSerializer extends BaseSourceSerializer<TileWMS, ITile
       reprojectionErrorThreshold: data.reprojectionErrorThreshold ?? 0.5,
       tileGrid: data.tileGrid ? this.deserializeTileGrid(data.tileGrid) : undefined,
       serverType: data.serverType as ServerType,
-      tileLoadFunction: data.tileLoadFunction ? injectFunction(data.tileLoadFunction) : undefined,
       url: data.url ?? undefined,
       urls: data.urls ?? undefined,
       wrapX: data.wrapX ?? true,
       transition: data.transition ?? undefined,
       zDirection: data.zDirection ?? 0
     });
+    
+    // 在创建 source 后，如果有自定义 tileLoadFunction，手动设置并绑定 this
+    if (data.tileLoadFunction) {
+      const customFunction = injectFunction(data.tileLoadFunction);
+      if (typeof customFunction === 'function') {
+        (tileWMSSource as any).tileLoadFunction_ = customFunction.bind(tileWMSSource);
+      }
+    }
     
     this.setBaseProperties(tileWMSSource, data);
     return tileWMSSource;

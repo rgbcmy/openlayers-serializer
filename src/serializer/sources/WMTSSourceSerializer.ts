@@ -3,6 +3,7 @@ import type { Source } from 'ol/source.js';
 import { BaseSourceSerializer } from '../base/BaseSourceSerializer.js';
 import type { IWMTS } from '../../dto/source.js';
 import WMTSTileGrid from 'ol/tilegrid/WMTS.js';
+import { injectFunction } from '../../common/registry.js';
 
 /**
  * WMTS Source序列化器
@@ -72,11 +73,11 @@ export class WMTSSourceSerializer extends BaseSourceSerializer<WMTS, IWMTS> {
       transition: data.transition ?? 250
     });
     
-    // 设置自定义tileLoadFunction
+    // 在创建 source 后，如果有自定义 tileLoadFunction，手动设置并绑定 this
     if (data.tileLoadFunction) {
-      const tileLoadFunction = this.deserializeFunctionFromDto(data.tileLoadFunction);
-      if (typeof tileLoadFunction === 'function') {
-        (wmtsSource as any).tileLoadFunction_ = tileLoadFunction.bind(wmtsSource);
+      const customFunction = injectFunction(data.tileLoadFunction);
+      if (typeof customFunction === 'function') {
+        (wmtsSource as any).tileLoadFunction_ = customFunction.bind(wmtsSource);
       }
     }
     

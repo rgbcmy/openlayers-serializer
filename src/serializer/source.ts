@@ -79,20 +79,31 @@ function createContextBoundFunction(serializedFunction: string) {
 */
 
 // 临时辅助函数，用于处理函数序列化的类型问题
+// 注意：这个文件是旧版本实现，新代码应使用 source-new.ts
 function serializeFunctionForDto(func: Function | undefined): string | undefined {
-  const result = serializeFunction(func);
-  return result ? JSON.stringify(result) : undefined;
+  if (!func) return undefined;
+  return func.toString();
 }
 
 // 临时辅助函数，用于处理函数反序列化的类型问题  
+// 注意：这个文件是旧版本实现，新代码应使用 source-new.ts
 function deserializeFunctionFromDto(serialized: string | undefined): Function | undefined {
   if (!serialized) return undefined;
+  // 兼容旧的 JSON 格式
+  if (serialized.startsWith('{') && serialized.includes('"type"')) {
+    try {
+      const parsed = JSON.parse(serialized);
+      return deserializeFunction(parsed);
+    } catch {
+      // JSON 解析失败，尝试直接创建函数
+    }
+  }
+  // 直接使用 Function 构造器（与 injectFunction 类似但简化版）
   try {
-    const parsed = JSON.parse(serialized);
-    return deserializeFunction(parsed);
-  } catch {
-    // 兼容旧的字符串格式
-    return deserializeFunction(serialized);
+    return new Function(`return ${serialized}`)();
+  } catch (error) {
+    console.error('Failed to deserialize function:', error);
+    return undefined;
   }
 }
 //矢量数据源加载策略

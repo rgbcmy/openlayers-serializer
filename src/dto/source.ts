@@ -1,6 +1,5 @@
 export type ISerializedSource =
   IBingMaps
-  |IIIIFSource
   | IXYZ
   | IOSM
   | IStadiaMaps

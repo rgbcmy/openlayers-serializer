@@ -200,32 +200,45 @@ Safely deserialize functions with validation.
 | **Map**      | `ol/Map`                            | 1 |
 | **View**     | `ol/View`                           | 1 |
 | **Layers**   | `Tile`, `Vector`, `Image`, `Heatmap`, `Group` (recursive) | **5** |
-| **Sources**  | `OSM`, `XYZ`, `BingMaps`, `StadiaMaps`, `Vector`, `TileWMS`, `ImageStatic`, `Cluster`, `IIIF`, `GeoTIFF`, `VectorTile`, `WMTS`, `UTFGrid`, `TileDebug` | **14** |
+| **Sources**  | Core (9) + Advanced (5) + Extended (7) | **21** |
 | **Features** | `ol/Feature` (with geometry)        | 1 |
 | **Styles**   | `Style`, `Fill`, `Stroke`, `Circle`, `Icon`, `Text` | 6+ |
 
-#### Layer Details
+#### Layer Details (5 Types)
 - ✅ **TileLayer** - Raster tile layers
 - ✅ **VectorLayer** - Vector feature layers with style support
 - ✅ **ImageLayer** - Static and dynamic image layers
 - ✅ **HeatmapLayer** - Heatmap visualization with gradients
 - ✅ **GroupLayer** - Hierarchical layer groups with recursive serialization
 
-#### Source Details
+#### Source Details (21 Types)
+
+**Core Sources (9):**
 - ✅ **OSM** - OpenStreetMap tiles
 - ✅ **XYZ** - Generic XYZ tile sources
 - ✅ **BingMaps** - Bing Maps aerial/road tiles
-- ✅ **StadiaMaps** - Stadia Maps (formerly Stamen) 
-- ✅ **Vector** - GeoJSON and other vector formats
+- ✅ **StadiaMaps** - Stadia Maps (formerly Stamen)
+- ✅ **TileDebug** - Debug tile boundaries
 - ✅ **TileWMS** - OGC WMS tile service
+- ✅ **Vector** - GeoJSON and other vector formats
 - ✅ **ImageStatic** - Static georeferenced images
-- ✅ **Cluster** - Point clustering with configurable distance
 - ✅ **IIIF** - International Image Interoperability Framework
+
+**Advanced Sources (5):**
+- ✅ **Cluster** - Point clustering with configurable distance
 - ✅ **GeoTIFF** - Cloud Optimized GeoTIFF
 - ✅ **VectorTile** - Mapbox Vector Tiles (MVT)
 - ✅ **WMTS** - OGC Web Map Tile Service
 - ✅ **UTFGrid** - Interactive UTF grid layers
-- ✅ **TileDebug** - Debug tile boundaries
+
+**Extended Sources (7):**
+- ✅ **TileJSON** - TileJSON specification tiles
+- ✅ **Zoomify** - Zoomify image pyramids
+- ✅ **OGCMapTile** - OGC Map Tile API
+- ✅ **ImageArcGISRest** - ArcGIS REST image services
+- ✅ **ImageWMS** - WMS image services
+- ✅ **OGCVectorTile** - OGC Vector Tile API
+- ✅ **TileArcGISRest** - ArcGIS REST tile services
 
 ---
 

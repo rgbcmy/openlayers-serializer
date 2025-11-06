@@ -196,14 +196,14 @@
 <body>
     <div class="header">
         <h1>🗺️ OpenLayers Serializer - 完整Demo测试</h1>
-        <p>测试所有支持的Layer和Source类型的序列化功能 (14种Source + 5种Layer)</p>
+        <p>测试所有支持的Layer和Source类型的序列化功能 (21种Source + 5种Layer)</p>
     </div>
     
     <div class="container">
         <div class="sidebar">
             <!-- Source类型Demo -->
             <div class="section">
-                <h3>📡 Source 类型 (14种)</h3>
+                <h3>📡 Source 类型 (21种)</h3>
                 <div class="demo-grid">
                     <div class="demo-item" onclick="loadOSMSource()">
                         <span class="emoji">🌍</span>OSM
@@ -245,7 +245,28 @@
                         <span class="emoji">🔤</span>UTF Grid
                     </div>
                     <div class="demo-item" onclick="loadTileDebugSource()">
-                        <span class="emoji">�</span>Tile Debug
+                        <span class="emoji">🐛</span>Tile Debug
+                    </div>
+                    <div class="demo-item" onclick="loadTileJSONSource()">
+                        <span class="emoji">📋</span>TileJSON
+                    </div>
+                    <div class="demo-item" onclick="loadZoomifySource()">
+                        <span class="emoji">🔍</span>Zoomify
+                    </div>
+                    <div class="demo-item" onclick="loadOGCMapTileSource()">
+                        <span class="emoji">🌐</span>OGC MapTile
+                    </div>
+                    <div class="demo-item" onclick="loadImageArcGISRestSource()">
+                        <span class="emoji">🗺️</span>ImageArcGIS
+                    </div>
+                    <div class="demo-item" onclick="loadImageWMSSource()">
+                        <span class="emoji">🖼️</span>ImageWMS
+                    </div>
+                    <div class="demo-item" onclick="loadOGCVectorTileSource()">
+                        <span class="emoji">🔷</span>OGC VectorTile
+                    </div>
+                    <div class="demo-item" onclick="loadTileArcGISRestSource()">
+                        <span class="emoji">🗾</span>TileArcGIS
                     </div>
                 </div>
             </div>
@@ -299,8 +320,12 @@
             <div class="section">
                 <h3>📊 支持统计</h3>
                 <div class="layer-info">
-                    <strong>Source类型:</strong> 14种<br>
-                    <small style="color: #666;">OSM, XYZ, BingMaps, StadiaMaps, Vector, TileWMS, ImageStatic, Cluster, IIIF, GeoTIFF, VectorTile, WMTS, UTFGrid, TileDebug</small>
+                    <strong>Source类型:</strong> 21种<br>
+                    <small style="color: #666;">
+                        核心: OSM, XYZ, BingMaps, StadiaMaps, TileDebug, TileWMS, Vector, ImageStatic, IIIF<br>
+                        高级: Cluster, GeoTIFF, VectorTile, WMTS, UTFGrid<br>
+                        扩展: TileJSON, Zoomify, OGCMapTile, ImageArcGISRest, ImageWMS, OGCVectorTile, TileArcGISRest
+                    </small>
                 </div>
                 <div class="layer-info" style="margin-top: 5px;">
                     <strong>Layer类型:</strong> 5种<br>
@@ -323,10 +348,11 @@
 
     <script type="module">
         import { Map, View } from 'ol';
-        import { Tile as TileLayer, Vector as VectorLayer, Image as ImageLayer, Heatmap, Group } from 'ol/layer.js';
+        import { Tile as TileLayer, Vector as VectorLayer, Image as ImageLayer, Heatmap, Group, WebGLTile } from 'ol/layer.js';
         import { 
             OSM, XYZ, BingMaps, Vector as VectorSource, TileWMS, ImageStatic, 
-            Cluster, IIIF, GeoTIFF, VectorTile, WMTS, UTFGrid, TileDebug, StadiaMaps
+            Cluster, IIIF, GeoTIFF, VectorTile, WMTS, UTFGrid, TileDebug, StadiaMaps,
+            TileJSON, Zoomify, OGCMapTile, ImageArcGISRest, ImageWMS, OGCVectorTile, TileArcGISRest
         } from 'ol/source.js';
         import { fromLonLat } from 'ol/proj.js';
         import { Point, LineString } from 'ol/geom.js';
@@ -339,7 +365,9 @@
         import { serializeLayer, deserializeLayer } from './src/serializer/layer-new.js';
         import { serializeSource, deserializeSource } from './src/serializer/source-new.js';
         import { serializeMap, deserializeMap } from './src/serializer/map.js';
-        
+        /**
+         * @type {import("ol/Map").default}
+         * */
         let map;
         let currentLayer = null;
         let layerCounter = 0;
@@ -499,11 +527,29 @@
         window.loadGeoTIFFSource = function() {
             const source = new GeoTIFF({
                 sources: [{
-                    url: 'https://cloud.sdfi.dk/v1/archive/example.tiff'
-                }]
+                    url: 'https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/36/Q/WD/2020/7/S2A_36QWD_20200701_0_L2A/TCI.tif'
+                }],
             });
-            const layer = new TileLayer({ source });
-            addLayerToMap(layer, 'GeoTIFF Layer');
+            // GeoTIFF 需要使用 WebGLTile 图层而不是普通 Tile 图层
+            const layer = new WebGLTile({ 
+                source
+            });
+            addLayerToMap(layer, 'GeoTIFF Layer (Sentinel-2)');
+            
+            // 等待源加载后移动视图到数据范围
+            const onSourceReady = function () {
+                if (source.getState() === 'ready') {
+                    const view = map.getView();
+                    const extent = source.getTileGrid().getExtent();
+                    if (extent) {
+                        view.fit(extent, {duration: 1000, padding: [50, 50, 50, 50]});
+                        log('📍 视图已定位到 GeoTIFF 数据范围');
+                    }
+                    source.un('change', onSourceReady);
+                }
+            };
+            source.on('change', onSourceReady);
+            
             setActiveDemo(event.target);
         };
         
@@ -565,6 +611,87 @@
                 updateSerializationStatus('IIIF需要有效的服务器URL', 'error');
                 log('❌ IIIF加载失败: ' + error.message);
             }
+        };
+        
+        // 新增的 7 个 Source 类型
+        window.loadTileJSONSource = function() {
+            const source = new TileJSON({
+                url: 'https://api.maptiler.com/maps/streets/tiles.json?key=get_your_own_OpIi9ZULNHzrESv6T2vL',
+                crossOrigin: 'anonymous'
+            });
+            const layer = new TileLayer({ source });
+            addLayerToMap(layer, 'TileJSON Layer');
+            setActiveDemo(event.target);
+        };
+        
+        window.loadZoomifySource = function() {
+            const source = new Zoomify({
+                url: 'https://example.com/zoomify/',
+                size: [4000, 3000],
+                crossOrigin: 'anonymous'
+            });
+            const layer = new TileLayer({ source });
+            addLayerToMap(layer, 'Zoomify Layer');
+            setActiveDemo(event.target);
+        };
+        
+        window.loadOGCMapTileSource = function() {
+            const source = new OGCMapTile({
+                url: 'https://maps.gnosis.earth/ogcapi/collections/blueMarble/map/tiles/WebMercatorQuad'
+            });
+            const layer = new TileLayer({ source });
+            addLayerToMap(layer, 'OGC MapTile Layer');
+            setActiveDemo(event.target);
+        };
+        
+        window.loadImageArcGISRestSource = function() {
+            const source = new ImageArcGISRest({
+                url: 'https://sampleserver6.arcgisonline.com/arcgis/rest/services/USA/MapServer',
+                params: {
+                    'LAYERS': 'show:0,1,2'
+                }
+            });
+            const layer = new ImageLayer({ source });
+            addLayerToMap(layer, 'Image ArcGIS REST Layer');
+            setActiveDemo(event.target);
+        };
+        
+        window.loadImageWMSSource = function() {
+            const source = new ImageWMS({
+                url: 'https://ahocevar.com/geoserver/wms',
+                params: {
+                    'LAYERS': 'topp:states'
+                },
+                serverType: 'geoserver'
+            });
+            const layer = new ImageLayer({ source });
+            addLayerToMap(layer, 'Image WMS Layer');
+            setActiveDemo(event.target);
+        };
+        
+        window.loadOGCVectorTileSource = function() {
+            const source = new OGCVectorTile({
+                url: 'https://maps.gnosis.earth/ogcapi/collections/NaturalEarth:cultural:ne_10m_admin_0_countries/tiles/WebMercatorQuad',
+                format: new MVT()
+            });
+            const layer = new VectorLayer({
+                source,
+                style: new Style({
+                    fill: new Fill({ color: 'rgba(255, 255, 255, 0.6)' }),
+                    stroke: new Stroke({ color: '#319FD3', width: 1 })
+                })
+            });
+            addLayerToMap(layer, 'OGC VectorTile Layer');
+            setActiveDemo(event.target);
+        };
+        
+        window.loadTileArcGISRestSource = function() {
+            const source = new TileArcGISRest({
+                url: 'https://services.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer'
+            });
+            const layer = new TileLayer({ source });
+            addLayerToMap(layer, 'Tile ArcGIS REST Layer');
+            setActiveDemo(event.target);
         };
         
         // Layer加载函数 (这些复用Source函数)
@@ -673,6 +800,27 @@
                 const resultsDiv = document.getElementById('test-results');
                 const contentDiv = document.getElementById('results-content');
                 
+                // 使用自定义的JSON.stringify处理循环引用
+                const getCircularReplacer = () => {
+                    const seen = new WeakSet();
+                    return (key, value) => {
+                        if (typeof value === "object" && value !== null) {
+                            if (seen.has(value)) {
+                                return "[Circular Reference]";
+                            }
+                            seen.add(value);
+                        }
+                        return value;
+                    };
+                };
+                
+                let serializedJson;
+                try {
+                    serializedJson = JSON.stringify(serialized, getCircularReplacer(), 2);
+                } catch (e) {
+                    serializedJson = '无法显示完整的序列化数据（包含循环引用）';
+                }
+                
                 contentDiv.innerHTML = `
                     <div class="layer-info">
                         <strong>图层类型:</strong> ${currentLayer.constructor.name}<br>
@@ -680,8 +828,8 @@
                         <strong>序列化结果:</strong> ✅ 成功<br>
                         <strong>反序列化结果:</strong> ✅ 成功
                     </div>
-                    <pre style="font-size: 11px; color: #666; margin-top: 10px;">
-${JSON.stringify(serialized, null, 2)}
+                    <pre style="font-size: 11px; color: #666; margin-top: 10px; max-height: 200px; overflow-y: auto;">
+${serializedJson}
                     </pre>
                 `;
                 resultsDiv.style.display = 'block';
@@ -728,33 +876,71 @@ ${JSON.stringify(serialized, null, 2)}
             let passedTests = 0;
             let results = [];
             
+            // 使用 requestIdleCallback 代替 setTimeout 以优化性能
+            const scheduleTask = (callback) => {
+                if (window.requestIdleCallback) {
+                    requestIdleCallback(callback, { timeout: 1000 });
+                } else {
+                    setTimeout(callback, 0);
+                }
+            };
+            
+            function showResults() {
+                const resultsDiv = document.getElementById('test-results');
+                const contentDiv = document.getElementById('results-content');
+                
+                contentDiv.innerHTML = `
+                    <h4>🧪 完整测试结果</h4>
+                    <div class="layer-info ${passedTests === totalTests ? '' : 'style="background: #ffe6e6;"'}">
+                        <strong>总测试数:</strong> ${totalTests}<br>
+                        <strong>通过数:</strong> ${passedTests}<br>
+                        <strong>成功率:</strong> ${Math.round(passedTests / totalTests * 100)}%
+                    </div>
+                    <div style="max-height: 300px; overflow-y: auto; margin-top: 10px;">
+                        ${results.map(r => `
+                            <div style="padding: 5px; border-bottom: 1px solid #eee;">
+                                ${r.success ? '✅' : '❌'} <strong>${r.name}:</strong> ${r.message}
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                resultsDiv.style.display = 'block';
+                
+                updateSerializationStatus(
+                    `完整测试完成: ${passedTests}/${totalTests} 通过`, 
+                    passedTests === totalTests ? 'success' : 'error'
+                );
+            }
+            
+            function testSerialization(test) {
+                try {
+                    if (currentLayer) {
+                        const serialized = serializeLayer(currentLayer);
+                        const deserialized = deserializeLayer(serialized);
+                        
+                        const source = currentLayer.getSource();
+                        if (source) {
+                            const serializedSource = serializeSource(source);
+                            const deserializedSource = deserializeSource(serializedSource);
+                        }
+                        
+                        results.push({ name: test.name, success: true, message: '序列化/反序列化成功' });
+                        passedTests++;
+                        log(`✅ ${test.name} 测试通过`);
+                    } else {
+                        results.push({ name: test.name, success: false, message: '图层创建失败' });
+                        log(`❌ ${test.name} 测试失败: 图层创建失败`);
+                    }
+                } catch (error) {
+                    results.push({ name: test.name, success: false, message: error.message });
+                    log(`❌ ${test.name} 测试失败:`, error);
+                }
+            }
+            
             function runNextTest(index) {
                 if (index >= testFunctions.length) {
-                    // 所有测试完成
-                    const resultsDiv = document.getElementById('test-results');
-                    const contentDiv = document.getElementById('results-content');
-                    
-                    contentDiv.innerHTML = `
-                        <h4>🧪 完整测试结果</h4>
-                        <div class="layer-info ${passedTests === totalTests ? '' : 'style="background: #ffe6e6;"'}">
-                            <strong>总测试数:</strong> ${totalTests}<br>
-                            <strong>通过数:</strong> ${passedTests}<br>
-                            <strong>成功率:</strong> ${Math.round(passedTests / totalTests * 100)}%
-                        </div>
-                        <div style="max-height: 300px; overflow-y: auto; margin-top: 10px;">
-                            ${results.map(r => `
-                                <div style="padding: 5px; border-bottom: 1px solid #eee;">
-                                    ${r.success ? '✅' : '❌'} <strong>${r.name}:</strong> ${r.message}
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
-                    resultsDiv.style.display = 'block';
-                    
-                    updateSerializationStatus(
-                        `完整测试完成: ${passedTests}/${totalTests} 通过`, 
-                        passedTests === totalTests ? 'success' : 'error'
-                    );
+                    // 所有测试完成，使用 requestIdleCallback 显示结果
+                    scheduleTask(showResults);
                     return;
                 }
                 
@@ -765,40 +951,18 @@ ${JSON.stringify(serialized, null, 2)}
                     // 运行测试函数
                     test.func();
                     
-                    // 等待500ms后测试序列化
-                    setTimeout(() => {
-                        try {
-                            if (currentLayer) {
-                                const serialized = serializeLayer(currentLayer);
-                                const deserialized = deserializeLayer(serialized);
-                                
-                                const source = currentLayer.getSource();
-                                if (source) {
-                                    const serializedSource = serializeSource(source);
-                                    const deserializedSource = deserializeSource(serializedSource);
-                                }
-                                
-                                results.push({ name: test.name, success: true, message: '序列化/反序列化成功' });
-                                passedTests++;
-                                log(`✅ ${test.name} 测试通过`);
-                            } else {
-                                results.push({ name: test.name, success: false, message: '图层创建失败' });
-                                log(`❌ ${test.name} 测试失败: 图层创建失败`);
-                            }
-                        } catch (error) {
-                            results.push({ name: test.name, success: false, message: error.message });
-                            log(`❌ ${test.name} 测试失败:`, error);
-                        }
-                        
+                    // 使用 requestIdleCallback 在浏览器空闲时执行测试
+                    scheduleTask(() => {
+                        testSerialization(test);
                         // 继续下一个测试
                         runNextTest(index + 1);
-                    }, 500);
+                    });
                     
                 } catch (error) {
                     results.push({ name: test.name, success: false, message: error.message });
                     log(`❌ ${test.name} 测试失败:`, error);
                     // 继续下一个测试
-                    setTimeout(() => runNextTest(index + 1), 100);
+                    scheduleTask(() => runNextTest(index + 1));
                 }
             }
             
@@ -814,7 +978,8 @@ ${JSON.stringify(serialized, null, 2)}
         
         // 地图操作函数
         window.clearMap = function() {
-            map.getLayers().clear();
+            map.setTarget(null);
+            //map.getLayers().clear();
             currentLayer = null;
             updateLayerInfo();
             updateMapStatus('地图已清空');
@@ -848,7 +1013,10 @@ ${JSON.stringify(serialized, null, 2)}
                 const saved = localStorage.getItem('saved_map');
                 if (saved) {
                     const mapData = JSON.parse(saved);
-                    const loadedMap = deserializeMap(mapData);
+                    if(map){
+                        map.setTarget(null);
+                    }
+                    map = deserializeMap(mapData);
                     // 这里需要更复杂的逻辑来替换当前地图
                     updateMapStatus('地图加载成功');
                     log('📁 地图加载成功');

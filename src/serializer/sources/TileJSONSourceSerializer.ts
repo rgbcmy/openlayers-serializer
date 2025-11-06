@@ -1,69 +1,69 @@
-import BingMaps from 'ol/source/BingMaps.js';
+import { TileJSON } from 'ol/source.js';
 import type { Source } from 'ol/source.js';
 import { BaseSourceSerializer } from '../base/BaseSourceSerializer.js';
-import type { IBingMaps } from '../../dto/source.js';
+import type { ITileJSON } from '../../dto/source.js';
 import { injectFunction } from '../../common/registry.js';
 
 /**
- * BingMaps Source序列化器
+ * TileJSON Source序列化器
  */
-export class BingMapsSourceSerializer extends BaseSourceSerializer<BingMaps, IBingMaps> {
+export class TileJSONSourceSerializer extends BaseSourceSerializer<TileJSON, ITileJSON> {
   
-  canSerialize(source: Source): source is BingMaps {
-    return source instanceof BingMaps;
+  canSerialize(source: Source): source is TileJSON {
+    return source instanceof TileJSON;
   }
   
   getTypeName(): string {
-    return 'BingMaps';
+    return 'TileJSON';
   }
   
-  serialize(source: BingMaps): IBingMaps {
+  serialize(source: TileJSON): ITileJSON {
     const baseProps = this.getBaseProperties(source);
     
     return {
       ...baseProps,
-      type: 'BingMaps',
-      casheSize: undefined,
-      hidpi: this.getSourceProperty(source, 'hidpi_') ?? true,
-      culture: this.getSourceProperty(source, 'culture_') || 'en-US',
-      key: source.getKey(),
-      imagerySet: source.getImagerySet(),
+      type: 'TileJSON',
+      attributions: (source.getAttributions() as any) ?? null,
+      cacheSize: null,
+      crossOrigin: this.getSourceProperty(source, 'crossOrigin') || source.get('crossOrigin'),
       interpolate: source.getInterpolate() ?? true,
-      maxZoom: source.getTileGrid()?.getMaxZoom() || source.get('maxZoom') || 19,
+      jsonp: source.get('jsonp') ?? false,
       reprojectionErrorThreshold: this.getSourceProperty(source, 'reprojectionErrorThreshold_') || source.get('reprojectionErrorThreshold') || 0.5,
+      tileJson: source.getTileJSON(),
       tileLoadFunction: this.serializeFunctionForDto(source.getTileLoadFunction()),
+      tileSize: (source as any)['tileSize_'],
+      url: source.get('url'),
       wrapX: source.getWrapX() ?? true,
       transition: this.getSourceProperty(source, 'tileOptions.transition') || source.get('transition'),
       zDirection: (source as any).zDirection ?? 0,
-      placeholderTiles: this.getSourceProperty(source, 'placeholderTiles_') as boolean | undefined,
     };
   }
   
-  deserialize(data: IBingMaps): BingMaps {
-    const bingSource = new BingMaps({
+  deserialize(data: ITileJSON): TileJSON {
+    const tileJsonSource = new TileJSON({
+      attributions: data.attributions as any,
       cacheSize: undefined,
-      hidpi: data.hidpi ?? true,
-      culture: data.culture || 'en-US',
-      key: data.key!,
-      imagerySet: data.imagerySet!,
+      crossOrigin: data.crossOrigin,
       interpolate: data.interpolate ?? true,
-      maxZoom: data.maxZoom ?? 19,
+      jsonp: data.jsonp ?? false,
       reprojectionErrorThreshold: data.reprojectionErrorThreshold ?? 0.5,
+      tileJSON: data.tileJson as any,
+      tileSize: data.tileSize as any ?? [256, 256],
+      url: data.url ?? undefined,
       wrapX: data.wrapX ?? true,
       transition: data.transition ?? undefined,
-      zDirection: data.zDirection ?? 0,
-      placeholderTiles: data.placeholderTiles ?? undefined
+      zDirection: data.zDirection ?? 0
     });
     
     // 在创建 source 后，如果有自定义 tileLoadFunction，手动设置并绑定 this
     if (data.tileLoadFunction) {
       const customFunction = injectFunction(data.tileLoadFunction);
       if (typeof customFunction === 'function') {
-        (bingSource as any).tileLoadFunction_ = customFunction.bind(bingSource);
+        (tileJsonSource as any).tileLoadFunction_ = customFunction.bind(tileJsonSource);
       }
     }
     
-    this.setBaseProperties(bingSource, data);
-    return bingSource;
+    this.setBaseProperties(tileJsonSource, data);
+    return tileJsonSource;
   }
 }

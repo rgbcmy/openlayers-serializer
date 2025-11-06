@@ -3,6 +3,7 @@ import type { Source } from 'ol/source.js';
 import { BaseSourceSerializer } from '../base/BaseSourceSerializer.js';
 import type { ICluster } from '../../dto/source.js';
 import { serializeSource, deserializeSource } from '../source-new.js';
+import { injectFunction } from '../../common/registry.js';
 
 /**
  * Cluster Source序列化器
@@ -67,16 +68,16 @@ export class ClusterSourceSerializer extends BaseSourceSerializer<Cluster<any>, 
     
     // 设置自定义函数
     if (data.geometryFunction) {
-      const geometryFunction = this.deserializeFunctionFromDto(data.geometryFunction);
+      const geometryFunction = injectFunction(data.geometryFunction);
       if (typeof geometryFunction === 'function') {
-        (clusterSource as any).geometryFunction_ = geometryFunction;
+        (clusterSource as any).geometryFunction_ = geometryFunction.bind(clusterSource);
       }
     }
     
     if (data.createCluster) {
-      const createCluster = this.deserializeFunctionFromDto(data.createCluster);
+      const createCluster = injectFunction(data.createCluster);
       if (typeof createCluster === 'function') {
-        (clusterSource as any).createCluster_ = createCluster;
+        (clusterSource as any).createCluster_ = createCluster.bind(clusterSource);
       }
     }
     

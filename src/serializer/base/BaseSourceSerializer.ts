@@ -37,24 +37,11 @@ export abstract class BaseSourceSerializer<T extends Source = Source, D extends 
   
   /**
    * 序列化函数为DTO格式
+   * 直接返回函数字符串，供 injectFunction() 使用
    */
   protected serializeFunctionForDto(func: Function | undefined): string | undefined {
-    const result = serializeFunction(func);
-    return result ? JSON.stringify(result) : undefined;
-  }
-  
-  /**
-   * 从DTO格式反序列化函数
-   */
-  protected deserializeFunctionFromDto(serialized: string | undefined): Function | undefined {
-    if (!serialized) return undefined;
-    try {
-      const parsed = JSON.parse(serialized);
-      return deserializeFunction(parsed);
-    } catch {
-      // 兼容旧的字符串格式
-      return deserializeFunction(serialized);
-    }
+    if (!func) return undefined;
+    return func.toString();
   }
   
   /**

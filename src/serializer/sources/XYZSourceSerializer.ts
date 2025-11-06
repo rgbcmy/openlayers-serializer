@@ -57,9 +57,6 @@ export class XYZSourceSerializer extends BaseSourceSerializer<XYZ, IXYZ> {
   }
   
   deserialize(data: IXYZ): XYZ {
-    const tileUrlFunction = data.tileUrlFunction ? this.deserializeFunctionFromDto(data.tileUrlFunction) as any : undefined;
-    const tileLoadFunction = data.tileLoadFunction ? injectFunction(data.tileLoadFunction) : undefined;
-    
     const xyzSource = new XYZ({
       attributions: data.attributions as AttributionLike,
       attributionsCollapsible: data.attributionsCollapsible ?? true,
@@ -73,17 +70,31 @@ export class XYZSourceSerializer extends BaseSourceSerializer<XYZ, IXYZ> {
       minZoom: data.minZoom ?? 0,
       maxResolution: data.maxResolution ?? undefined,
       tileGrid: data.tileGrid ? this.deserializeTileGrid(data.tileGrid) : undefined,
-      tileLoadFunction: tileLoadFunction,
       tilePixelRatio: data.tilePixelRatio ?? 1,
       tileSize: (data.tileSize as Size) ?? [256, 256],
       gutter: data.gutter ?? 0,
-      tileUrlFunction: tileUrlFunction,
       url: data.url ?? undefined,
       urls: data.urls ?? undefined,
       wrapX: data.wrapX ?? true,
       transition: data.transition ?? 250,
       zDirection: data.zDirection ?? 0
     });
+    
+    // 在创建 source 后，如果有自定义 tileLoadFunction，手动设置并绑定 this
+    if (data.tileLoadFunction) {
+      const customFunction = injectFunction(data.tileLoadFunction);
+      if (typeof customFunction === 'function') {
+        (xyzSource as any).tileLoadFunction_ = customFunction.bind(xyzSource);
+      }
+    }
+    
+    // 处理 tileUrlFunction
+    if (data.tileUrlFunction) {
+      const tileUrlFunction = injectFunction(data.tileUrlFunction);
+      if (typeof tileUrlFunction === 'function') {
+        (xyzSource as any).tileUrlFunction_ = tileUrlFunction.bind(xyzSource);
+      }
+    }
     
     this.setBaseProperties(xyzSource, data);
     return xyzSource;

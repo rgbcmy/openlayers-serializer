@@ -5,6 +5,7 @@ import type { Source } from 'ol/source.js';
 import type { AttributionLike } from 'ol/source/Source.js';
 import { BaseSourceSerializer } from '../base/BaseSourceSerializer.js';
 import type { IVectorSource } from '../../dto/source.js';
+import { injectFunction } from '../../common/registry.js';
 
 /**
  * Vector Source序列化器
@@ -142,7 +143,7 @@ export class VectorSourceSerializer extends BaseSourceSerializer<VectorSource, I
     // Custom Loader处理
     if (data.loader) {
       try {
-        const customLoader = this.deserializeFunctionFromDto(data.loader);
+        const customLoader = injectFunction(data.loader);
         if (typeof customLoader === 'function') {
           vectorOptions.loader = customLoader;
         }

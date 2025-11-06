@@ -40,7 +40,6 @@ export class OSMSourceSerializer extends BaseSourceSerializer<OSM, IOSM> {
   }
   
   deserialize(data: IOSM): OSM {
-    // 先创建基本的 source，不包含 tileLoadFunction
     const osmSource = new OSM({
       attributions: data.attributions as AttributionLike,
       cacheSize: data.cacheSize ?? undefined,
@@ -55,11 +54,10 @@ export class OSMSourceSerializer extends BaseSourceSerializer<OSM, IOSM> {
       zDirection: data.zDirection ?? 0,
     });
     
-    // 在创建 source 后，如果有自定义 tileLoadFunction，则手动设置
+    // 在创建 source 后，如果有自定义 tileLoadFunction，手动设置并绑定 this
     if (data.tileLoadFunction) {
-      const customFunction = this.deserializeFunctionFromDto(data.tileLoadFunction);
+      const customFunction = injectFunction(data.tileLoadFunction);
       if (typeof customFunction === 'function') {
-        // 直接替换 source 的内部 tileLoadFunction
         (osmSource as any).tileLoadFunction_ = customFunction.bind(osmSource);
       }
     }

@@ -6,22 +6,34 @@
 
 ## 📦 已实现的功能
 
-### Source 类型 (14种)
+### Source 类型 (21种)
 
+**核心类型 (9种):**
 1. **OSM** - OpenStreetMap 瓦片源
 2. **XYZ** - 通用 XYZ 瓦片源
 3. **BingMaps** - 必应地图
 4. **StadiaMaps** - Stadia Maps (原 Stamen)
-5. **Vector** - 矢量数据源
+5. **TileDebug** - 瓦片调试源
 6. **TileWMS** - WMS 瓦片服务
-7. **ImageStatic** - 静态图片源
-8. **Cluster** - 聚类数据源
+7. **Vector** - 矢量数据源
+8. **ImageStatic** - 静态图片源
 9. **IIIF** - 国际图像互操作框架
-10. **GeoTIFF** - GeoTIFF 栅格数据
-11. **VectorTile** - 矢量瓦片 (MVT)
-12. **WMTS** - Web Map Tile Service
-13. **UTFGrid** - UTF Grid 交互数据
-14. **TileDebug** - 瓦片调试源
+
+**高级类型 (5种):**
+10. **Cluster** - 聚类数据源
+11. **GeoTIFF** - GeoTIFF 栅格数据
+12. **VectorTile** - 矢量瓦片 (MVT)
+13. **WMTS** - Web Map Tile Service
+14. **UTFGrid** - UTF Grid 交互数据
+
+**扩展类型 (7种):**
+15. **TileJSON** - TileJSON 规范瓦片
+16. **Zoomify** - Zoomify 图像金字塔
+17. **OGCMapTile** - OGC Map Tile API
+18. **ImageArcGISRest** - ArcGIS REST 图像服务
+19. **ImageWMS** - WMS 图像服务
+20. **OGCVectorTile** - OGC Vector Tile API
+21. **TileArcGISRest** - ArcGIS REST 瓦片服务
 
 ### Layer 类型 (5种)
 

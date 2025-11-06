@@ -47,7 +47,6 @@ export class StadiaMapsSourceSerializer extends BaseSourceSerializer<StadiaMaps,
       minZoom: data.minZoom ?? undefined,
       maxZoom: data.maxZoom ?? undefined,
       reprojectionErrorThreshold: data.reprojectionErrorThreshold ?? 0.5,
-      tileLoadFunction: data.tileLoadFunction ? injectFunction(data.tileLoadFunction) : undefined,
       transition: data.transition ?? 250,
       url: data.url ?? undefined,
       wrapX: data.wrapX ?? true,
@@ -55,6 +54,14 @@ export class StadiaMapsSourceSerializer extends BaseSourceSerializer<StadiaMaps,
       apiKey: data.apiKey ?? undefined,
       retina: data.retina ?? undefined,
     });
+    
+    // 在创建 source 后，如果有自定义 tileLoadFunction，手动设置并绑定 this
+    if (data.tileLoadFunction) {
+      const customFunction = injectFunction(data.tileLoadFunction);
+      if (typeof customFunction === 'function') {
+        (stadiaSource as any).tileLoadFunction_ = customFunction.bind(stadiaSource);
+      }
+    }
     
     this.setBaseProperties(stadiaSource, data);
     return stadiaSource;

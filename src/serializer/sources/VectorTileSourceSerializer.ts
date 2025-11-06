@@ -4,6 +4,7 @@ import { BaseSourceSerializer } from '../base/BaseSourceSerializer.js';
 import type { IVectorTile } from '../../dto/source.js';
 import MVT from 'ol/format/MVT.js';
 import GeoJSON from 'ol/format/GeoJSON.js';
+import { injectFunction } from '../../common/registry.js';
 
 /**
  * VectorTile Source序列化器
@@ -60,16 +61,17 @@ export class VectorTileSourceSerializer extends BaseSourceSerializer<VectorTile,
       format: format as any
     });
     
-    // 设置自定义函数
+    // 在创建 source 后，如果有自定义 tileLoadFunction，手动设置并绑定 this
     if (data.tileLoadFunction) {
-      const tileLoadFunction = this.deserializeFunctionFromDto(data.tileLoadFunction);
-      if (typeof tileLoadFunction === 'function') {
-        (vectorTileSource as any).tileLoadFunction_ = tileLoadFunction.bind(vectorTileSource);
+      const customFunction = injectFunction(data.tileLoadFunction);
+      if (typeof customFunction === 'function') {
+        (vectorTileSource as any).tileLoadFunction_ = customFunction.bind(vectorTileSource);
       }
     }
     
+    // 处理 tileUrlFunction
     if (data.tileUrlFunction) {
-      const tileUrlFunction = this.deserializeFunctionFromDto(data.tileUrlFunction);
+      const tileUrlFunction = injectFunction(data.tileUrlFunction);
       if (typeof tileUrlFunction === 'function') {
         (vectorTileSource as any).tileUrlFunction_ = tileUrlFunction.bind(vectorTileSource);
       }

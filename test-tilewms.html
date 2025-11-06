@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TileWMS tileLoadFunction 测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .map-container {
+            position: relative;
+            height: 500px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .info-panel {
+            background: #f5f5f5;
+            border-radius: 8px;
+            padding: 20px;
+            overflow-y: auto;
+            max-height: 500px;
+        }
+        
+        .test-section {
+            margin-bottom: 20px;
+        }
+        
+        .test-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            margin: 5px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .log {
+            background: #2d2d2d;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        
+        .log-entry {
+            margin: 5px 0;
+            padding: 3px 0;
+            border-bottom: 1px solid #404040;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        
+        .status.success { background: #4caf50; color: white; }
+        .status.error { background: #f44336; color: white; }
+        .status.warning { background: #ff9800; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔬 TileWMS tileLoadFunction 测试</h1>
+            <p>测试 tileLoadFunction 序列化/反序列化是否正常工作</p>
+        </div>
+        
+        <div class="content">
+            <div>
+                <div class="map-container">
+                    <div id="map"></div>
+                </div>
+                
+                <div class="test-section">
+                    <div class="test-title">测试操作</div>
+                    <button class="btn" onclick="testSerializeDeserialize()">🔄 测试序列化/反序列化</button>
+                    <button class="btn" onclick="testTileLoadFunction()">🔍 检查 tileLoadFunction</button>
+                    <button class="btn" onclick="clearLog()">🧹 清空日志</button>
+                </div>
+            </div>
+            
+            <div class="info-panel">
+                <div class="test-section">
+                    <div class="test-title">测试状态</div>
+                    <div id="status"></div>
+                </div>
+                
+                <div class="test-section">
+                    <div class="test-title">日志输出</div>
+                    <div id="log" class="log"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import Map from 'ol/Map.js';
+        import View from 'ol/View.js';
+        import TileLayer from 'ol/layer/Tile.js';
+        import TileWMS from 'ol/source/TileWMS.js';
+        import { serializeSource, deserializeSource } from './src/serializer/source-new.js';
+        
+        let map;
+        let originalSource;
+        let deserializedSource;
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            const timestamp = new Date().toLocaleTimeString();
+            entry.textContent = `[${timestamp}] ${message}`;
+            logDiv.insertBefore(entry, logDiv.firstChild);
+        }
+        
+        function updateStatus(message, type = 'success') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<span class="status ${type}">${message}</span>`;
+        }
+        
+        window.clearLog = function() {
+            document.getElementById('log').innerHTML = '';
+            log('日志已清空');
+        };
+        
+        // 初始化地图
+        function initMap() {
+            log('🚀 初始化地图...');
+            
+            originalSource = new TileWMS({
+                url: 'https://ahocevar.com/geoserver/wms',
+                params: {
+                    'LAYERS': 'topp:states',
+                    'TILED': true
+                },
+                serverType: 'geoserver',
+                transition: 0
+            });
+            
+            map = new Map({
+                target: 'map',
+                layers: [
+                    new TileLayer({
+                        source: originalSource
+                    })
+                ],
+                view: new View({
+                    center: [-10997148, 4569099],
+                    zoom: 4
+                })
+            });
+            
+            log('✅ 地图初始化完成');
+            updateStatus('地图初始化完成', 'success');
+        }
+        
+        // 测试序列化和反序列化
+        window.testSerializeDeserialize = async function() {
+            try {
+                log('📦 开始序列化测试...');
+                updateStatus('正在测试...', 'warning');
+                
+                // 序列化
+                const serialized = serializeSource(originalSource);
+                log('✅ 序列化成功');
+                log(`序列化类型: ${serialized.type}`);
+                log(`tileLoadFunction 存在: ${!!serialized.tileLoadFunction}`);
+                
+                if (serialized.tileLoadFunction) {
+                    const funcStr = serialized.tileLoadFunction.substring(0, 100);
+                    log(`tileLoadFunction 预览: ${funcStr}...`);
+                }
+                
+                // 反序列化
+                log('🔄 开始反序列化...');
+                deserializedSource = deserializeSource(serialized);
+                log('✅ 反序列化成功');
+                
+                // 检查类型
+                const isCorrectType = deserializedSource instanceof TileWMS;
+                debugger
+                log(`类型检查: ${isCorrectType ? '✅ 正确' : '❌ 错误'}`);
+                
+                // 检查 tileLoadFunction
+                const hasTileLoadFunction = typeof deserializedSource.getTileLoadFunction === 'function';
+                log(`getTileLoadFunction 方法存在: ${hasTileLoadFunction ? '✅ 是' : '❌ 否'}`);
+                
+                if (hasTileLoadFunction) {
+                    const tileLoadFunc = deserializedSource.getTileLoadFunction();
+                    log(`tileLoadFunction 类型: ${typeof tileLoadFunc}`);
+                    log(`tileLoadFunction 是函数: ${typeof tileLoadFunc === 'function' ? '✅ 是' : '❌ 否'}`);
+                    
+                    // 检查内部属性
+                    const internalFunc = (deserializedSource).tileLoadFunction_;
+                    log(`内部 tileLoadFunction_ 类型: ${typeof internalFunc}`);
+                    log(`内部 tileLoadFunction_ 是函数: ${typeof internalFunc === 'function' ? '✅ 是' : '❌ 否'}`);
+                }
+                
+                // 更新地图显示反序列化的source
+                const layers = map.getLayers().getArray();
+                if (layers.length > 0) {
+                    layers[0].setSource(deserializedSource);
+                    log('✅ 地图已更新为反序列化的 source');
+                }
+                
+                updateStatus('测试完成！', 'success');
+                
+            } catch (error) {
+                log(`❌ 错误: ${error.message}`, 'error');
+                console.error(error);
+                updateStatus('测试失败！', 'error');
+            }
+        };
+        
+        // 检查 tileLoadFunction
+        window.testTileLoadFunction = function() {
+            try {
+                log('🔍 检查 tileLoadFunction...');
+                
+                if (!deserializedSource) {
+                    log('⚠️ 请先运行序列化/反序列化测试');
+                    updateStatus('请先运行测试', 'warning');
+                    return;
+                }
+                
+                const func = deserializedSource.getTileLoadFunction();
+                log(`getTileLoadFunction() 返回类型: ${typeof func}`);
+                log(`是否为函数: ${typeof func === 'function' ? '✅ 是' : '❌ 否'}`);
+                
+                if (typeof func === 'function') {
+                    log(`函数字符串长度: ${func.toString().length} 字符`);
+                    log(`函数预览: ${func.toString().substring(0, 150)}...`);
+                    updateStatus('tileLoadFunction 正常！', 'success');
+                } else {
+                    log('❌ tileLoadFunction 不是函数！');
+                    updateStatus('tileLoadFunction 异常！', 'error');
+                }
+                
+                // 检查内部属性
+                const internalFunc = (deserializedSource).tileLoadFunction_;
+                log(`内部属性 tileLoadFunction_ 类型: ${typeof internalFunc}`);
+                
+            } catch (error) {
+                log(`❌ 检查失败: ${error.message}`);
+                updateStatus('检查失败', 'error');
+            }
+        };
+        
+        // 页面加载时初始化
+        initMap();
+        
+        // 自动运行测试
+        setTimeout(() => {
+            log('🔄 自动运行序列化测试...');
+            testSerializeDeserialize();
+        }, 1000);
+    </script>
+</body>
+</html>
